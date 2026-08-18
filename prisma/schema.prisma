@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String   @unique
+  passwordHash String?
+  role         String   @default("STAFF") // ADMIN, STAFF, CUSTOMER
+  address      String?
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  orderIndex  Int       @default(0)
+  isActive    Boolean   @default(true)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Product {
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  price       Float                @default(0)
+  image       String?
+  categoryId  String
+  category    Category             @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  isAvailable Boolean              @default(true) // Còn hàng / Hết hàng
+  isFeatured  Boolean              @default(false)
+  options     ProductOptionGroup[]
+  orderItems  OrderItem[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model ProductOptionGroup {
+  id          String          @id @default(cuid())
+  productId   String
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title       String          // Chọn Size, Mức Đường, Mức Đá, Topping
+  type        String          @default("RADIO") // RADIO (chọn 1), CHECKBOX (chọn nhiều)
+  required    Boolean         @default(false)
+  items       ProductOption[]
+}
+
+model ProductOption {
+  id          String             @id @default(cuid())
+  groupId     String
+  group       ProductOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name        String             // Size L, 50% Đường, Trân châu hoàng kim
+  price       Float              @default(0) // Giá cộng thêm (+6.000, +5.000...)
+  isDefault   Boolean            @default(false)
+  isAvailable Boolean            @default(true)
+}
+
+model Order {
+  id              String               @id @default(cuid())
+  orderCode       String               @unique // DINO-8801
+  customerName    String
+  customerPhone   String
+  deliveryAddress String?
+  note            String?
+  paymentMethod   String               @default("COD") // SEPAY_QR, COD, MOMO
+  paymentStatus   String               @default("PENDING") // PENDING, PAID, CANCELLED
+  orderStatus     String               @default("NEW") // NEW, PREPARING, DELIVERING, COMPLETED, CANCELLED
+  totalAmount     Float                @default(0)
+  userId          String?
+  user            User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items           OrderItem[]
+  transactions    PaymentTransaction[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName   String
+  quantity      Int      @default(1)
+  unitPrice     Float    @default(0)
+  optionsNote   String?  // Size L, 50% đường, Trân châu đen
+  totalPrice    Float    @default(0)
+}
+
+model PaymentTransaction {
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  gateway         String   @default("SEPAY") // SEPAY, CASH, BANK_TRANSFER
+  transactionCode String?
+  amount          Float    @default(0)
+  content         String?
+  status          String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  rawData         String?
+  createdAt       DateTime @default(now())
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model RefreshSession {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  familyId    String    // Dùng để phát hiện Token Reuse (thu hồi toàn bộ session family)
+  role        String    @default("CUSTOMER") // ADMIN, STAFF, CUSTOMER
+  deviceId    String?
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  lastUsedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Coupon {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  description       String?
+  discountPercent   Float     @default(10)
+  minOrderAmount    Float     @default(0)
+  maxDiscountAmount Float?
+  startDate         DateTime?
+  endDate           DateTime?
+  isActive          Boolean   @default(true)
+  usageLimit        Int?
+  usageCount        Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
