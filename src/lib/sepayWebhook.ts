@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
-import { notifyTelegramPaymentSuccess } from "@/lib/telegram/notifications";
+import { notifyTelegramNewOrder, notifyTelegramPaymentSuccess } from "@/lib/telegram/notifications";
 import { realtimeHub } from "@/lib/realtime";
 import { paymentConfig } from "@/lib/paymentConfig";
 
@@ -104,10 +104,17 @@ export async function handleSepayWebhook(req: NextRequest) {
       );
 
       // Bắn sự kiện Realtime SSE cho Web Admin & Khách hàng
+      realtimeHub.emitOrderCreated(order);
       realtimeHub.emitOrderStatusUpdated(order);
 
-      // Nếu là lần đầu tiên thanh toán thành công, gửi thông báo Telegram cho Admin
+      // Nếu là lần đầu tiên thanh toán thành công: Chính thức duyệt đơn & gửi sang Telegram Admin
       if (!wasAlreadyPaid) {
+        // 1. Gửi Order Card có đầy đủ nút bấm pha chế cho Admin Telegram
+        notifyTelegramNewOrder(order).catch((err) => {
+          console.error("[Telegram New Order Error]:", err);
+        });
+
+        // 2. Gửi thông báo xác nhận thanh toán thành công
         notifyTelegramPaymentSuccess(order, amount > 0 ? amount : order.totalAmount).catch((err) => {
           console.error("[Telegram SePay Notification Error]:", err);
         });

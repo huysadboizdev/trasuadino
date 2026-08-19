@@ -131,13 +131,15 @@ export async function POST(req: NextRequest) {
       items: items || [],
     });
 
-    // Bắn sự kiện Realtime lập tức tới Admin & Khách hàng (< 50ms)
-    realtimeHub.emitOrderCreated(newOrder);
-
-    // Bắn thông báo Telegram thời gian thực cho Admin
-    notifyTelegramNewOrder(newOrder).catch((err) => {
-      console.error("[Telegram Notification Error]:", err);
-    });
+    // Đối với đơn COD: Bắn thông báo Telegram và Realtime lập tức cho Admin/Quán
+    if (newOrder.paymentMethod === "COD") {
+      realtimeHub.emitOrderCreated(newOrder);
+      notifyTelegramNewOrder(newOrder).catch((err) => {
+        console.error("[Telegram Notification Error]:", err);
+      });
+    } else {
+      console.log(`==> [ORDER CREATED] Đơn #${newOrder.orderCode} (SEPAY_QR) đang chờ khách thanh toán trong 5 phút...`);
+    }
 
     return NextResponse.json({
       success: true,

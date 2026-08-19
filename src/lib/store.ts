@@ -459,12 +459,58 @@ export const dataStore = {
     }
     return null;
   },
+  cancelExpiredOrder: (identifier: string) => {
+    const store = getStore();
+    if (!identifier) return null;
+    const raw = String(identifier).trim();
+    const cleanUpper = raw.replace(/^#/, "").trim().toUpperCase();
+    const ord = store.orders.find(
+      (o) =>
+        o.id === raw ||
+        o.orderCode === raw ||
+        o.id.toUpperCase() === cleanUpper ||
+        o.orderCode.toUpperCase() === cleanUpper
+    );
+    if (ord && ord.paymentStatus === "PENDING") {
+      ord.orderStatus = "CANCELLED";
+      ord.paymentStatus = "CANCELLED";
+      ord.updatedAt = new Date().toISOString();
+
+      if (ord.couponCode) {
+        const cpn = store.coupons?.find(
+          (c) => c.code.toUpperCase() === ord.couponCode?.toUpperCase().trim()
+        );
+        if (cpn) {
+          cpn.usageCount = Math.max(0, (cpn.usageCount || 1) - 1);
+        }
+        if (store.voucherUsages) {
+          const uIdx = store.voucherUsages.findIndex(
+            (u) => u.orderId === ord.id || u.orderCode === ord.orderCode
+          );
+          if (uIdx !== -1) {
+            store.voucherUsages.splice(uIdx, 1);
+          }
+        }
+      }
+
+      saveStoreToFile(store);
+      return ord;
+    }
+    return null;
+  },
   createOrder: (orderData: Omit<Order, "id" | "orderCode" | "createdAt">) => {
     const store = getStore();
     const codeNum = Math.floor(100 + Math.random() * 900);
     const trackingToken = `trk_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     const finalUserId = (orderData.userId && orderData.userId.trim()) || "usr-system-guest";
     const isGuest = !orderData.userId || orderData.userId === "usr-system-guest";
+    const now = new Date();
+    const expiresAt =
+      orderData.expiresAt ||
+      (orderData.paymentMethod === "SEPAY_QR"
+        ? new Date(now.getTime() + 5 * 60 * 1000).toISOString()
+        : undefined);
+
     const newOrder: Order = {
       ...orderData,
       id: `ord-${Date.now()}`,
@@ -472,7 +518,8 @@ export const dataStore = {
       userId: finalUserId,
       trackingToken,
       isGuest,
-      createdAt: new Date().toISOString(),
+      createdAt: now.toISOString(),
+      expiresAt,
     };
     store.orders.unshift(newOrder);
 

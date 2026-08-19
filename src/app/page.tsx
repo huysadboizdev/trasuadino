@@ -1825,6 +1825,10 @@ export default function StorefrontHomePage() {
             showToast(`🎉 Đơn hàng #${orderSuccess.orderCode} đã được thanh toán thành công!`, "success");
           }}
           onViewOrders={() => setIsUserOrdersOpen(true)}
+          onReorder={() => {
+            setOrderSuccess(null);
+            setIsCheckoutOpen(true);
+          }}
         />
       )}
 

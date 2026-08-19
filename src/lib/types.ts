@@ -191,6 +191,7 @@ export interface Order {
   totalAmount: number; // Tổng tiền thực tế sau giảm giá
   items: OrderItem[];
   createdAt: string;
+  expiresAt?: string; // Thời gian hết hạn thanh toán (createdAt + 5 phút cho SEPAY_QR)
   updatedAt?: string;
   completedAt?: string;
 }

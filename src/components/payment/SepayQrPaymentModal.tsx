@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency } from "@/lib/constants";
 import { generateVietQRUrl, paymentConfig } from "@/lib/paymentConfig";
+import { Clock, AlertTriangle, CheckCircle2, RotateCcw, Copy, Check } from "lucide-react";
 
 interface SepayQrPaymentModalProps {
   isOpen: boolean;
@@ -15,7 +16,10 @@ interface SepayQrPaymentModalProps {
   totalAmount: number;
   onPaymentSuccess?: () => void;
   onViewOrders?: () => void;
+  onReorder?: () => void;
 }
+
+const TOTAL_TIMEOUT_SECONDS = 300; // 5 phút
 
 export function SepayQrPaymentModal({
   isOpen,
@@ -24,11 +28,14 @@ export function SepayQrPaymentModal({
   totalAmount,
   onPaymentSuccess,
   onViewOrders,
+  onReorder,
 }: SepayQrPaymentModalProps) {
-  const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "PAID" | "ERROR">("PENDING");
+  const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "PAID" | "EXPIRED">("PENDING");
+  const [timeLeft, setTimeLeft] = useState<number>(TOTAL_TIMEOUT_SECONDS);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [qrLoaded, setQrLoaded] = useState(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const bankAccount = paymentConfig.sepay.bankAccount;
   const bankHolder = paymentConfig.sepay.bankHolder;
@@ -43,9 +50,50 @@ export function SepayQrPaymentModal({
     template: "compact",
   });
 
-  // Polling kiểm tra trạng thái thanh toán mỗi 3 giây
+  // Reset state mỗi khi mở modal đơn mới
   useEffect(() => {
-    if (!isOpen || paymentStatus === "PAID" || !orderCode) {
+    if (isOpen) {
+      setPaymentStatus("PENDING");
+      setTimeLeft(TOTAL_TIMEOUT_SECONDS);
+      setQrLoaded(false);
+    }
+  }, [isOpen, orderCode]);
+
+  // Bộ đếm ngược 1 giây
+  useEffect(() => {
+    if (!isOpen || paymentStatus !== "PENDING") {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      return;
+    }
+
+    countdownIntervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setPaymentStatus("EXPIRED");
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
+  }, [isOpen, paymentStatus]);
+
+  // Polling kiểm tra trạng thái thanh toán từ Server mỗi 3 giây
+  useEffect(() => {
+    if (!isOpen || paymentStatus !== "PENDING" || !orderCode) {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
@@ -60,6 +108,8 @@ export function SepayQrPaymentModal({
         });
         if (res.ok) {
           const data = await res.json();
+
+          // 1. Nếu đã thanh toán thành công
           if (data.paid || data.paymentStatus === "PAID") {
             setPaymentStatus("PAID");
             if (pollIntervalRef.current) {
@@ -68,6 +118,26 @@ export function SepayQrPaymentModal({
             }
             if (onPaymentSuccess) {
               onPaymentSuccess();
+            }
+            return;
+          }
+
+          // 2. Nếu đơn hàng đã hết hạn hoặc bị hủy
+          if (data.isExpired || data.paymentStatus === "CANCELLED" || data.orderStatus === "CANCELLED") {
+            setPaymentStatus("EXPIRED");
+            setTimeLeft(0);
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+            return;
+          }
+
+          // 3. Đồng bộ thời gian còn lại từ server nếu có
+          if (typeof data.timeLeftSeconds === "number") {
+            setTimeLeft(data.timeLeftSeconds);
+            if (data.timeLeftSeconds <= 0) {
+              setPaymentStatus("EXPIRED");
             }
           }
         }
@@ -98,11 +168,26 @@ export function SepayQrPaymentModal({
     }, 2000);
   };
 
+  // Định dạng MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
+  const progressPercent = Math.max(0, Math.min(100, (timeLeft / TOTAL_TIMEOUT_SECONDS) * 100));
+
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title={paymentStatus === "PAID" ? "🎉 THANH TOÁN THÀNH CÔNG!" : "THANH TOÁN VIETQR"}
+      title={
+        paymentStatus === "PAID"
+          ? "🎉 THANH TOÁN THÀNH CÔNG!"
+          : paymentStatus === "EXPIRED"
+          ? "⏱️ MÃ THANH TOÁN HẾT HẠN"
+          : "THANH TOÁN VIETQR"
+      }
       subtitle={`Mã đơn hàng: #${orderCode}`}
       maxWidth="md"
       footer={
@@ -120,6 +205,32 @@ export function SepayQrPaymentModal({
             >
               Xem tiến độ đơn hàng →
             </Button>
+          ) : paymentStatus === "EXPIRED" ? (
+            <div className="flex items-center gap-2 w-full">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={onClose}
+                className="text-xs font-bold uppercase rounded-2xl py-3 px-4"
+              >
+                Đóng
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                fullWidth
+                onClick={() => {
+                  onClose();
+                  if (onReorder) {
+                    onReorder();
+                  }
+                }}
+                className="flex-1 text-xs sm:text-sm font-black uppercase tracking-wider bg-brand-900 hover:bg-brand-950 text-white py-3.5 rounded-2xl shadow-md flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Đặt lại đơn mới</span>
+              </Button>
+            </div>
           ) : (
             <Button
               variant="secondary"
@@ -137,51 +248,117 @@ export function SepayQrPaymentModal({
         </div>
       }
     >
-      <div className="space-y-4 py-1 text-center">
+      <div className="space-y-4 py-1 text-center select-none">
         {paymentStatus === "PAID" ? (
-          /* TRẠNG THÁI THANH TOÁN THÀNH CÔNG */
+          /* TRẠNG THÁI 1: THANH TOÁN THÀNH CÔNG */
           <div className="py-4 space-y-4 animate-in fade-in zoom-in duration-300">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 border-2 border-emerald-300 text-emerald-600 text-3xl font-black shadow-sm">
-              ✓
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
             <div>
               <h4 className="text-lg sm:text-xl font-black text-emerald-950 uppercase tracking-tight">
                 Xác nhận đã thanh toán thành công!
               </h4>
-              <p className="text-xs sm:text-sm text-neutral-600 mt-1 max-w-sm mx-auto">
-                Hệ thống đã tự động ghi nhận thanh toán cho đơn hàng <b>#{orderCode}</b>. Quán đang bắt đầu chuẩn bị đồ uống cho bạn.
+              <p className="text-xs sm:text-sm text-neutral-600 mt-1 max-w-sm mx-auto font-medium">
+                Hệ thống SePay đã tự động duyệt đơn hàng <b>#{orderCode}</b>. Quán Trà Sữa Dino đã nhận thông báo và bắt đầu pha chế món cho bạn!
               </p>
             </div>
 
             <div className="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200 text-left space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-neutral-600">Số tiền thanh toán:</span>
+                <span className="text-neutral-600 font-medium">Số tiền thanh toán:</span>
                 <span className="font-black text-emerald-800 text-sm">{formatCurrency(totalAmount)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-neutral-600">Cổng thanh toán:</span>
+                <span className="text-neutral-600 font-medium">Cổng thanh toán:</span>
                 <span className="font-bold text-neutral-800">VietQR Auto (SePay)</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-neutral-600">Trạng thái:</span>
+                <span className="text-neutral-600 font-medium">Trạng thái:</span>
                 <Badge variant="success" size="sm">ĐÃ THANH TOÁN</Badge>
               </div>
             </div>
           </div>
+        ) : paymentStatus === "EXPIRED" ? (
+          /* TRẠNG THÁI 2: HẾT HẠN THANH TOÁN (5 PHÚT) */
+          <div className="py-4 space-y-4 animate-in fade-in zoom-in duration-300">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-rose-100 border-2 border-rose-300 text-rose-600 shadow-sm">
+              <AlertTriangle className="w-9 h-9 text-rose-600" />
+            </div>
+
+            <div>
+              <h4 className="text-lg sm:text-xl font-black text-rose-950 uppercase tracking-tight">
+                Mã thanh toán đã hết hạn
+              </h4>
+              <p className="text-xs sm:text-sm text-neutral-600 mt-1.5 max-w-sm mx-auto font-medium leading-relaxed">
+                Mã QR thanh toán đã tự động hủy sau <strong>5 phút</strong> để bảo đảm an toàn giao dịch. Đơn hàng <b>#{orderCode}</b> đã được hủy tự động.
+              </p>
+            </div>
+
+            <div className="bg-rose-50/70 p-4 rounded-2xl border border-rose-200 text-left space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-neutral-600 font-medium">Mã đơn hàng:</span>
+                <span className="font-bold font-mono text-neutral-900">#{orderCode}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-neutral-600 font-medium">Số tiền:</span>
+                <span className="font-bold text-neutral-900">{formatCurrency(totalAmount)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-neutral-600 font-medium">Trạng thái đơn:</span>
+                <Badge variant="danger" size="sm">ĐÃ HỦY DO HẾT HẠN</Badge>
+              </div>
+            </div>
+
+            <div className="p-3 bg-neutral-100/80 rounded-xl text-[11px] text-neutral-500 font-medium">
+              💡 Bạn có thể bấm <strong>"Đặt lại đơn mới"</strong> bên dưới để hệ thống tạo mã QR thanh toán mới trong 5 phút tiếp theo.
+            </div>
+          </div>
         ) : (
-          /* GIAO DIỆN THANH TOÁN QUÉT MÃ QR */
+          /* TRẠNG THÁI 3: ĐANG CHỜ THANH TOÁN (CÓ ĐẾM NGƯỢC 5 PHÚT) */
           <>
-            {/* Header thông tin số tiền */}
-            <div className="bg-gradient-to-r from-brand-900 to-brand-950 text-white p-3.5 sm:p-4 rounded-2xl shadow-sm text-center">
+            {/* Header thông tin số tiền & Đồng hồ đếm ngược */}
+            <div className="bg-gradient-to-r from-brand-900 to-brand-950 text-white p-3.5 sm:p-4 rounded-2xl shadow-sm text-center space-y-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-brand-200">
                 Tổng tiền cần thanh toán
               </span>
-              <div className="text-2xl sm:text-3xl font-black tracking-tight mt-0.5 text-amber-300">
+              <div className="text-2xl sm:text-3xl font-black tracking-tight text-amber-300">
                 {formatCurrency(totalAmount)}
               </div>
-              <div className="text-[11px] text-neutral-200 mt-1 flex items-center justify-center gap-1.5 font-medium">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                Mã đơn: <b className="font-mono text-white font-black text-xs">#{orderCode}</b>
+
+              {/* Thanh đếm ngược 5 phút */}
+              <div className="pt-2 border-t border-brand-800/80 space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5 text-brand-200">
+                    <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span>Thời gian thanh toán còn lại:</span>
+                  </span>
+                  <span
+                    className={`font-mono text-sm font-black px-2 py-0.5 rounded-md ${
+                      timeLeft <= 60
+                        ? "bg-rose-500 text-white animate-pulse"
+                        : timeLeft <= 120
+                        ? "bg-amber-500 text-brand-950"
+                        : "bg-white/20 text-amber-300"
+                    }`}
+                  >
+                    {formatTime(timeLeft)}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-1.5 bg-brand-950/60 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-1000 ${
+                      timeLeft <= 60
+                        ? "bg-rose-500"
+                        : timeLeft <= 120
+                        ? "bg-amber-400"
+                        : "bg-emerald-400"
+                    }`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -230,9 +407,19 @@ export function SepayQrPaymentModal({
                   <button
                     type="button"
                     onClick={() => handleCopy(bankAccount, "account")}
-                    className="text-[11px] font-bold text-brand-700 hover:text-brand-900 bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-lg border border-brand-200 transition-colors"
+                    className="text-[11px] font-bold text-brand-700 hover:text-brand-900 bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-lg border border-brand-200 transition-colors flex items-center gap-1"
                   >
-                    {copiedField === "account" ? "✓ Đã chép" : "Sao chép"}
+                    {copiedField === "account" ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>Đã chép</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Sao chép</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -253,9 +440,19 @@ export function SepayQrPaymentModal({
                   <button
                     type="button"
                     onClick={() => handleCopy(orderCode, "content")}
-                    className="text-[11px] font-bold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg border border-rose-200 transition-colors"
+                    className="text-[11px] font-bold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg border border-rose-200 transition-colors flex items-center gap-1"
                   >
-                    {copiedField === "content" ? "✓ Đã chép" : "Sao chép"}
+                    {copiedField === "content" ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>Đã chép</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Sao chép</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -264,7 +461,7 @@ export function SepayQrPaymentModal({
             {/* Trạng thái lắng nghe thanh toán tự động */}
             <div className="bg-amber-50/80 border border-amber-200 p-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-medium text-amber-900">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-              <span>Đang chờ chuyển khoản... Hệ thống tự động xác nhận sau 3-5 giây.</span>
+              <span>Đang chờ chuyển khoản... Quán sẽ nhận đơn ngay khi bạn chuyển tiền xong.</span>
             </div>
           </>
         )}
