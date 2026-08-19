@@ -6029,7 +6029,7 @@
       "categoryName": "Sinh Tố - Nước Ép",
       "isAvailable": true,
       "isFeatured": true,
-      "salesCount": 250,
+      "salesCount": 251,
       "options": [
         {
           "id": "optg-size-c18ewr",
@@ -7218,6 +7218,33 @@
     }
   ],
   "orders": [
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "note": "",
+      "paymentMethod": "SEPAY_QR",
+      "paymentStatus": "PENDING",
+      "orderStatus": "NEW",
+      "subtotalAmount": 45000,
+      "discountAmount": 0,
+      "totalAmount": 45000,
+      "items": [
+        {
+          "productId": "nhung-st-38",
+          "productName": "Bơ Già Dừa Non",
+          "quantity": 1,
+          "unitPrice": 45000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh) • Topping: Hạt Nổ Yến Mạch",
+          "totalPrice": 45000
+        }
+      ],
+      "id": "ord-1787134356339",
+      "orderCode": "DINO-862",
+      "trackingToken": "trk_1787134356339_jtmuol7f",
+      "isGuest": true,
+      "createdAt": "2026-08-19T10:12:36.339Z"
+    },
     {
       "customerName": "Hà Quang Huy",
       "customerPhone": "0987789987",

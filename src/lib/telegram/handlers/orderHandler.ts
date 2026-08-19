@@ -1,8 +1,8 @@
+import { orderService } from "../../orderService";
 import { dataStore } from "../../store";
 import { keyboards } from "../keyboards";
-import { editTelegramMessageText, sendTelegramMessage } from "../botApi";
+import { editTelegramMessageText, sendTelegramMessage, answerTelegramCallbackQuery } from "../botApi";
 import { logTelegramAudit } from "../security";
-import { realtimeHub } from "../../realtime";
 import { OrderStatus } from "../../types";
 
 const PAGE_SIZE = 6;
@@ -10,11 +10,11 @@ const PAGE_SIZE = 6;
 function getStatusBadge(status: OrderStatus): string {
   switch (status) {
     case "NEW":
-      return "🔴 MỚI";
+      return "🔴 MỚI NHẬN";
     case "PREPARING":
-      return "🟡 ĐANG PHA";
+      return "🟡 ĐANG PHA CHẾ";
     case "DELIVERING":
-      return "🚚 ĐANG GIAO";
+      return "🚚 ĐANG GIAO HÀNG";
     case "COMPLETED":
       return "✅ HOÀN THÀNH";
     case "CANCELLED":
@@ -24,13 +24,21 @@ function getStatusBadge(status: OrderStatus): string {
   }
 }
 
+const statusNameMap: Record<OrderStatus, string> = {
+  NEW: "MỚI NHẬN",
+  PREPARING: "ĐANG PHA CHẾ",
+  DELIVERING: "ĐANG GIAO HÀNG",
+  COMPLETED: "HOÀN THÀNH",
+  CANCELLED: "ĐÃ HỦY",
+};
+
 export async function renderOrdersList(
   chatId: string | number,
   messageId: number | undefined,
   filter: string = "ALL",
   page: number = 1
 ) {
-  const allOrders = dataStore.getOrders(filter === "ALL" ? undefined : filter);
+  const allOrders = orderService.getOrders(filter === "ALL" ? undefined : filter);
   const totalOrders = allOrders.length;
   const totalPages = Math.max(1, Math.ceil(totalOrders / PAGE_SIZE));
   const currentPage = Math.min(Math.max(1, page), totalPages);
@@ -58,7 +66,7 @@ export async function renderOrdersList(
         minute: "2-digit",
       });
       text += `${startIndex + index + 1}. <b>${o.orderCode}</b> · ${amountStr}₫ · ${getStatusBadge(o.orderStatus)} (<i>${timeStr}</i>)\n`;
-      text += `   👤 <i>${o.customerName} (${o.customerPhone})</i>\n`;
+      text += `   👤 <i>${o.customerName || "Khách"} (${o.customerPhone})</i>\n`;
     });
   }
 
@@ -102,9 +110,9 @@ export async function renderOrderDetail(
   messageId: number | undefined,
   orderId: string
 ) {
-  const order = dataStore.getOrderById(orderId);
+  const order = orderService.getOrderById(orderId);
   if (!order) {
-    const errorText = `❌ <b>Đơn hàng "${orderId}" không còn tồn tại hoặc đã bị xóa.</b>`;
+    const errorText = `❌ <b>Đơn hàng "${orderId}" không còn tồn tại trong hệ thống.</b>`;
     if (messageId) return await editTelegramMessageText(chatId, messageId, errorText, { reply_markup: keyboards.backToDashboard() });
     return await sendTelegramMessage(chatId, errorText, { reply_markup: keyboards.backToDashboard() });
   }
@@ -122,7 +130,7 @@ export async function renderOrderDetail(
     order.paymentMethod === "SEPAY_QR"
       ? "Chuyển khoản SePay VietQR"
       : order.paymentMethod === "COD"
-      ? "Tiền mặt (COD)"
+      ? "Tiền mặt khi nhận (COD)"
       : "MoMo";
 
   const paymentStatusBadge =
@@ -175,53 +183,63 @@ export async function handleOrderStatusUpdate(
   messageId: number,
   orderId: string,
   newStatus: OrderStatus,
-  telegramUserId: string | number
+  telegramUserId: string | number,
+  callbackQueryId?: string
 ) {
-  console.log(`[Telegram Order Status Update] orderId=${orderId}, targetStatus=${newStatus}, adminId=${telegramUserId}`);
+  console.log(
+    `[Telegram Order Status Update] orderId="${orderId}", targetStatus="${newStatus}", adminId=${telegramUserId}`
+  );
 
-  // 1. Tìm đơn hàng qua ID / orderCode / trackingToken
-  const existingOrder = dataStore.getOrderById(orderId);
-  if (!existingOrder) {
-    console.warn(`[Telegram Order Status Update] Order not found: orderId=${orderId}`);
+  const result = orderService.updateStatus(orderId, newStatus, {
+    source: "TELEGRAM_ADMIN",
+    id: telegramUserId,
+  });
+
+  if (!result.success) {
+    if (callbackQueryId) {
+      if (result.reason === "NOT_FOUND") {
+        await answerTelegramCallbackQuery(callbackQueryId, `❌ Đơn hàng #${orderId} không còn tồn tại`, true);
+      } else {
+        await answerTelegramCallbackQuery(callbackQueryId, `❌ Lỗi: ${result.message}`, true);
+      }
+    }
+
     return await editTelegramMessageText(
       chatId,
       messageId,
-      `❌ <b>Đơn hàng #${orderId} không còn tồn tại.</b>\n<i>Vui lòng quay lại danh sách để kiểm tra các đơn mới nhất.</i>`,
+      `❌ <b>${result.message}</b>\n<i>Vui lòng quay lại danh sách để kiểm tra.</i>`,
       { reply_markup: keyboards.backToDashboard() }
     );
   }
 
-  // 2. Idempotent check: Nếu đơn đã ở trạng thái này rồi, không báo lỗi mà hiển thị lại giao diện cập nhật
-  if (existingOrder.orderStatus === newStatus) {
-    return await renderOrderDetail(chatId, messageId, existingOrder.id);
-  }
+  const targetOrder = result.order!;
+  const statusLabel = statusNameMap[newStatus] || newStatus;
 
-  // 3. Cập nhật trạng thái trong database
-  const updatedOrder = dataStore.updateOrderStatus(existingOrder.id, newStatus);
-  if (!updatedOrder) {
-    console.error(`[Telegram Order Status Update] Failed to update status in database: orderId=${existingOrder.id}`);
-    return await editTelegramMessageText(
-      chatId,
-      messageId,
-      `❌ <b>Không thể cập nhật trạng thái đơn #${existingOrder.orderCode}.</b>`,
-      { reply_markup: keyboards.backToDashboard() }
-    );
+  if (callbackQueryId) {
+    if (result.isUnchanged) {
+      await answerTelegramCallbackQuery(
+        callbackQueryId,
+        `ℹ️ Đơn #${targetOrder.orderCode} đã ở trạng thái ${statusLabel}`
+      );
+    } else {
+      await answerTelegramCallbackQuery(
+        callbackQueryId,
+        `✅ Đã chuyển đơn #${targetOrder.orderCode} sang: ${statusLabel}`
+      );
+    }
   }
 
   logTelegramAudit({
     telegramUserId: String(telegramUserId),
     action: `UPDATE_ORDER_STATUS_${newStatus}`,
     resource: "ORDER",
-    resourceId: updatedOrder.orderCode,
-    details: { newStatus, previousStatus: existingOrder.orderStatus },
+    resourceId: targetOrder.orderCode,
+    details: { newStatus, previousStatus: result.previousStatus },
     result: "SUCCESS",
   });
 
-  // 4. Bắn sự kiện realtime cập nhật sang Admin Web và Khách hàng
-  realtimeHub.emitOrderStatusUpdated(updatedOrder);
-
-  // 5. Re-render chi tiết đơn đã cập nhật
-  return await renderOrderDetail(chatId, messageId, updatedOrder.id);
+  // Re-render chi tiết đơn đã cập nhật
+  return await renderOrderDetail(chatId, messageId, targetOrder.id);
 }
 
 export async function handleConfirmCancelOrder(
@@ -229,14 +247,14 @@ export async function handleConfirmCancelOrder(
   messageId: number,
   orderId: string
 ) {
-  const order = dataStore.getOrderById(orderId);
+  const order = orderService.getOrderById(orderId);
   if (!order) return;
 
-  const text = `⚠️ <b>XÁC NHẬN HỦY ĐƠN HÀNG #${order.orderCode}</b>\n\nBạn có chắc chắn muốn hủy đơn hàng của <b>${order.customerName}</b> không?\n<i>Hành động này sẽ hoàn lại số lượt sử dụng voucher (nếu có).</i>`;
+  const text = `⚠️ <b>XÁC NHẬN HỦY ĐƠN HÀNG #${order.orderCode}</b>\n\nBạn có chắc chắn muốn hủy đơn hàng của <b>${order.customerName || "Khách"}</b> không?\n<i>Hành động này sẽ hoàn lại số lượt sử dụng voucher (nếu có).</i>`;
 
   const markup = keyboards.confirmAction(
-    `order:exec_cancel:${orderId}`,
-    `order:detail:${orderId}`,
+    `order:exec_cancel:${order.id}`,
+    `order:detail:${order.id}`,
     "❌ Xác nhận HỦY ĐƠN"
   );
 
@@ -247,21 +265,32 @@ export async function handleExecuteCancelOrder(
   chatId: string | number,
   messageId: number,
   orderId: string,
-  telegramUserId: string | number
+  telegramUserId: string | number,
+  callbackQueryId?: string
 ) {
-  const updatedOrder = dataStore.updateOrderStatus(orderId, "CANCELLED");
-  if (!updatedOrder) return;
+  const result = orderService.updateStatus(orderId, "CANCELLED", {
+    source: "TELEGRAM_ADMIN",
+    id: telegramUserId,
+  });
+
+  if (!result.success) {
+    if (callbackQueryId) {
+      await answerTelegramCallbackQuery(callbackQueryId, `❌ ${result.message}`, true);
+    }
+    return;
+  }
+
+  if (callbackQueryId) {
+    await answerTelegramCallbackQuery(callbackQueryId, `✅ Đã hủy đơn #${result.order!.orderCode}`);
+  }
 
   logTelegramAudit({
     telegramUserId: String(telegramUserId),
     action: "CANCEL_ORDER",
     resource: "ORDER",
-    resourceId: updatedOrder.orderCode,
+    resourceId: result.order!.orderCode,
     result: "SUCCESS",
   });
 
-  // Bắn sự kiện realtime cập nhật sang Admin Web và Khách hàng
-  realtimeHub.emitOrderStatusUpdated(updatedOrder);
-
-  return await renderOrderDetail(chatId, messageId, updatedOrder.id);
+  return await renderOrderDetail(chatId, messageId, result.order!.id);
 }

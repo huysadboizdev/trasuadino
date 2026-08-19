@@ -240,11 +240,14 @@ export async function processTelegramWebhookUpdate(update: any) {
 
     if (!chatId || !messageId || !userId) return;
 
-    // Phản hồi callback ngay lập tức để Telegram tắt loading spinner trên nút
-    await answerTelegramCallbackQuery(cb.id);
+    console.log(
+      `[Telegram Callback] received callbackQueryId=${cb.id}, callbackData="${data}", telegramUserId=${userId}, telegramChatId=${chatId}`
+    );
 
     // Kiểm tra quyền Admin Whitelist
     if (!isAuthorizedTelegramAdmin(userId, chatId)) {
+      console.warn(`[Telegram Security] Unauthorized callback attempt from userId=${userId}`);
+      await answerTelegramCallbackQuery(cb.id, "⛔ Bạn không có quyền thực hiện thao tác này.", true);
       await sendTelegramMessage(chatId, "⛔ Bạn không có quyền thực hiện thao tác này.");
       return;
     }
@@ -255,6 +258,7 @@ export async function processTelegramWebhookUpdate(update: any) {
 
     // 1. Dashboard
     if (data === "nav:dashboard") {
+      await answerTelegramCallbackQuery(cb.id);
       clearConversationSession(userId);
       await renderDashboard(chatId, messageId);
       return;
@@ -262,12 +266,14 @@ export async function processTelegramWebhookUpdate(update: any) {
 
     // 2. Orders Navigation & Actions
     if (data.startsWith("nav:orders:")) {
+      await answerTelegramCallbackQuery(cb.id);
       const [, , filter, pageStr] = data.split(":");
       await renderOrdersList(chatId, messageId, filter || "ALL", Number(pageStr) || 1);
       return;
     }
 
     if (data.startsWith("order:detail:")) {
+      await answerTelegramCallbackQuery(cb.id);
       const orderId = data.replace("order:detail:", "");
       await renderOrderDetail(chatId, messageId, orderId);
       return;
@@ -275,26 +281,34 @@ export async function processTelegramWebhookUpdate(update: any) {
 
     if (data.startsWith("order:status:")) {
       if (!hasPermission(role, "orders.update")) {
+        await answerTelegramCallbackQuery(cb.id, "⛔ Bạn không có quyền cập nhật đơn hàng.", true);
         await sendTelegramMessage(chatId, "⛔ Bạn không có quyền cập nhật đơn hàng.");
         return;
       }
       const parts = data.split(":");
       const orderId = parts[2];
       const newStatus = parts[3] as OrderStatus;
-      await handleOrderStatusUpdate(chatId, messageId, orderId, newStatus, userId);
+      console.log(
+        `[Telegram Callback] parsedAction=order:status, parsedOrderId="${orderId}", parsedTargetStatus="${newStatus}"`
+      );
+      await handleOrderStatusUpdate(chatId, messageId, orderId, newStatus, userId, cb.id);
       return;
     }
 
     if (data.startsWith("order:confirm_cancel:")) {
+      await answerTelegramCallbackQuery(cb.id);
       const orderId = data.replace("order:confirm_cancel:", "");
       await handleConfirmCancelOrder(chatId, messageId, orderId);
       return;
     }
 
     if (data.startsWith("order:exec_cancel:")) {
-      if (!hasPermission(role, "orders.update")) return;
+      if (!hasPermission(role, "orders.update")) {
+        await answerTelegramCallbackQuery(cb.id, "⛔ Bạn không có quyền hủy đơn hàng.", true);
+        return;
+      }
       const orderId = data.replace("order:exec_cancel:", "");
-      await handleExecuteCancelOrder(chatId, messageId, orderId, userId);
+      await handleExecuteCancelOrder(chatId, messageId, orderId, userId, cb.id);
       return;
     }
 
