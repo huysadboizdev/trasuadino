@@ -233,16 +233,13 @@ export function SepayQrPaymentModal({
             </div>
           ) : (
             <Button
-              variant="secondary"
+              variant="outline"
               size="md"
               fullWidth
-              onClick={() => {
-                onClose();
-                if (onViewOrders) onViewOrders();
-              }}
-              className="text-xs font-bold uppercase tracking-wider py-3 rounded-2xl"
+              onClick={onClose}
+              className="text-xs font-bold uppercase tracking-wider py-3 rounded-2xl border-neutral-300 hover:bg-neutral-100 text-neutral-700"
             >
-              Tôi đã chuyển khoản / Xem đơn hàng
+              Đóng / Hủy thanh toán
             </Button>
           )}
         </div>
