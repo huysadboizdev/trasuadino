@@ -1796,7 +1796,7 @@ export default function StorefrontHomePage() {
                     : "bg-white text-neutral-800 border-neutral-300"
                 }`}
               >
-                Quét VietQR SePay
+                Thanh toán qua Bank
               </button>
               <button
                 type="button"

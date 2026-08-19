@@ -33,7 +33,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const getPaymentMethodText = (method?: string) => {
     switch (method) {
       case "SEPAY_QR":
-        return "CHUYỂN KHOẢN SEPAY";
+        return "CHUYỂN KHOẢN QUA BANK";
       case "MOMO":
         return "VÍ MOMO";
       case "ZALOPAY":

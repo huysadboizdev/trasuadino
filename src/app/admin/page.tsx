@@ -300,7 +300,7 @@ export default function AdminDashboardPage() {
                     {formatCurrency(order.totalAmount)}
                   </p>
                   <p className="text-[10px] font-black uppercase text-neutral-400">
-                    {order.paymentMethod === "SEPAY_QR" ? "VietQR SePay" : "Tiền mặt COD"}
+                    {order.paymentMethod === "SEPAY_QR" ? "Chuyển khoản Bank" : "Tiền mặt COD"}
                   </p>
                 </div>
 

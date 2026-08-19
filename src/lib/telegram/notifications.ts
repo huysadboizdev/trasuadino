@@ -6,7 +6,7 @@ export function buildOrderMessage(order: Order): string {
   const amountStr = new Intl.NumberFormat("vi-VN").format(order.totalAmount);
   const paymentMethodLabel =
     order.paymentMethod === "SEPAY_QR"
-      ? "Chuyển khoản SePay VietQR"
+      ? "Chuyển khoản qua Bank"
       : order.paymentMethod === "COD"
       ? "Tiền mặt (COD)"
       : "MoMo";
@@ -73,7 +73,7 @@ export async function notifyTelegramPaymentSuccess(order: Order, amount: number)
 📦 <b>Mã đơn hàng:</b> <code>#${order.orderCode}</code>
 👤 <b>Khách hàng:</b> ${order.customerName} (<code>${order.customerPhone}</code>)
 💰 <b>Số tiền chuyển khoản:</b> <code>${amountStr} ₫</code>
-🏦 <b>Cổng thanh toán:</b> SePay VietQR Auto
+🏦 <b>Cổng thanh toán:</b> Chuyển khoản qua Bank
 
 ✅ Đơn hàng đã tự động chuyển sang trạng thái <b>ĐÃ THANH TOÁN (PAID)</b>.`;
 

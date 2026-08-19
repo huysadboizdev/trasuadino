@@ -125,11 +125,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             {order.paymentMethod === "SEPAY_QR" ? (
               order.paymentStatus === "PAID" ? (
                 <Badge variant="success" size="sm" className="text-[10px]">
-                  ĐÃ TRẢ SEPAY
+                  ĐÃ TRẢ BANK
                 </Badge>
               ) : (
                 <Badge variant="warning" size="sm" className="text-[10px]">
-                  CHỜ SEPAY
+                  CHỜ BANK
                 </Badge>
               )
             ) : (

@@ -41,7 +41,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         playDingSound();
       }
       showToast(
-        `🛎️ ĐƠN HÀNG MỚI #${newOrder.orderCode} - ${newOrder.customerName} (${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(newOrder.totalAmount)}) [${newOrder.paymentMethod === "COD" ? "Tiền mặt COD" : "VietQR"}]`,
+        `🛎️ ĐƠN HÀNG MỚI #${newOrder.orderCode} - ${newOrder.customerName} (${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(newOrder.totalAmount)}) [${newOrder.paymentMethod === "COD" ? "Tiền mặt COD" : "Chuyển khoản Bank"}]`,
         "warning"
       );
     },

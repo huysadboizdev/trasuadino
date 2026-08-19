@@ -186,7 +186,7 @@ export function SepayQrPaymentModal({
           ? "🎉 THANH TOÁN THÀNH CÔNG!"
           : paymentStatus === "EXPIRED"
           ? "⏱️ MÃ THANH TOÁN HẾT HẠN"
-          : "THANH TOÁN VIETQR"
+          : "THANH TOÁN QUA BANK"
       }
       subtitle={`Mã đơn hàng: #${orderCode}`}
       maxWidth="md"
@@ -268,7 +268,7 @@ export function SepayQrPaymentModal({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-neutral-600 font-medium">Cổng thanh toán:</span>
-                <span className="font-bold text-neutral-800">VietQR Auto (SePay)</span>
+                <span className="font-bold text-neutral-800">Chuyển khoản qua Bank</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-neutral-600 font-medium">Trạng thái:</span>
@@ -373,7 +373,7 @@ export function SepayQrPaymentModal({
                 {!qrLoaded && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-400 text-xs font-medium bg-neutral-50 rounded-xl">
                     <span className="animate-spin text-lg mb-1">⏳</span>
-                    Đang tạo mã VietQR...
+                    Đang tạo mã QR thanh toán...
                   </div>
                 )}
               </div>

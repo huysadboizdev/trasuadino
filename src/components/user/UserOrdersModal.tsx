@@ -357,7 +357,7 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
                             onClick={() => setSelectedQrOrder(order)}
                             className="text-xs font-black uppercase bg-brand-800 hover:bg-brand-900 text-white shadow-2xs"
                           >
-                            QUÉT QR SEPAY
+                            THANH TOÁN QUA BANK
                           </Button>
                         )
                       ) : (
