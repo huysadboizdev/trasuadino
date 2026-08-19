@@ -22,7 +22,7 @@ import { ProductCard } from "@/components/customer/ProductCard";
 import { MissingProfileModal } from "@/components/customer/MissingProfileModal";
 import { SepayQrPaymentModal } from "@/components/payment/SepayQrPaymentModal";
 import { Footer } from "@/components/ui/Footer";
-import { MapPin } from "lucide-react";
+import { MapPin, Truck, Phone } from "lucide-react";
 
 interface CartItem {
   id: string;
@@ -709,6 +709,22 @@ export default function StorefrontHomePage() {
     showToast("Đã hủy áp dụng mã giảm giá", "info");
   };
 
+  // Kiểm tra gợi ý nếu địa chỉ ghi rõ tỉnh/thành phố khác ngoài Thanh Hóa / Sầm Sơn
+  const isAddressOutsideScope = useMemo(() => {
+    if (!deliveryAddress || deliveryAddress.trim().length < 4) return false;
+    const lower = deliveryAddress.toLowerCase();
+    const farProvinces = [
+      "hà nội", "ha noi", "hcm", "hồ chí minh", "ho chi minh", "sài gòn", "sai gon",
+      "đà nẵng", "da nang", "hải phòng", "hai phong", "cần thơ", "can tho",
+      "bình dương", "binh duong", "đồng nai", "dong nai", "nghệ an", "nghe an",
+      "quảng ninh", "quang ninh", "hải dương", "hai duong", "bắc ninh", "bac ninh",
+      "thái nguyên", "nam định", "ninh bình", "hưng yên", "vĩnh phúc", "phú thọ"
+    ];
+    const isFar = farProvinces.some((p) => lower.includes(p));
+    const isLocal = lower.includes("thanh hóa") || lower.includes("thanh hoa") || lower.includes("sầm sơn") || lower.includes("sam son");
+    return isFar && !isLocal;
+  }, [deliveryAddress]);
+
   const validateOrderForm = () => {
     const errors: { name?: string; phone?: string; address?: string } = {};
 
@@ -839,6 +855,21 @@ export default function StorefrontHomePage() {
 
   return (
     <div className="min-h-screen bg-[#faf8f5] text-neutral-900 selection:bg-brand-500 selection:text-white flex flex-col justify-between">
+      {/* 0. ANNOUNCEMENT BAR: PHẠM VI GIAO HÀNG */}
+      <aside
+        aria-label="Thông báo phạm vi giao hàng"
+        className="w-full bg-gradient-to-r from-[#2c1209] via-[#482017] to-[#2c1209] text-amber-100 text-[11px] sm:text-xs font-semibold py-1.5 px-3 text-center border-b border-brand-900/50 select-none shadow-2xs"
+      >
+        <div className="max-w-6xl mx-auto flex items-center justify-center gap-1.5 flex-wrap">
+          <span className="inline-flex items-center gap-1 text-amber-300 font-bold">
+            <Truck className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>Giao hàng:</span>
+          </span>
+          <span className="text-white font-semibold">Chỉ giao hàng khu vực Sầm Sơn &amp; lân cận</span>
+          <span className="hidden md:inline text-amber-200/80">• Giao nhanh 15-30 phút</span>
+        </div>
+      </aside>
+
       {/* 1. HEADER CHUYÊN NGHIỆP, CÂN ĐỐI & CHUẨN RESPONSIVE TOÀN BỘ THIẾT BỊ */}
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-neutral-200/80 shadow-2xs transition-all safe-top">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
@@ -978,6 +1009,26 @@ export default function StorefrontHomePage() {
                 GPS Tân Cửa
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* CỤM THÔNG BÁO PHẠM VI GIAO HÀNG TRANG CHỦ */}
+        <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 text-xs shadow-2xs select-none">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-800 flex items-center justify-center flex-shrink-0 font-black">
+              <Truck className="w-4 h-4 text-amber-800" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-black text-amber-950 text-xs sm:text-sm">
+                🚚 Giao hàng tận nơi: Sầm Sơn &amp; các khu vực lân cận
+              </p>
+              <p className="text-[11px] text-amber-800/90 font-medium truncate mt-0.5">
+                Trà Sữa Dino hiện chỉ nhận giao hàng trong khu vực Sầm Sơn, Thanh Hóa và các khu vực lân cận thuộc phạm vi phục vụ.
+              </p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-white/90 px-2.5 py-1 rounded-xl border border-amber-200/80 flex-shrink-0">
+            <span>⚡ Giao 15-30p</span>
           </div>
         </div>
 
@@ -1296,15 +1347,21 @@ export default function StorefrontHomePage() {
           </div>
         ) : (
           <div className="space-y-2.5 w-full max-w-full">
-            <h2 className="text-xs sm:text-sm font-black text-neutral-900 uppercase tracking-wider">
-              {searchQuery.trim()
-                ? `🔍 KẾT QUẢ TÌM KIẾM CHO "${searchQuery}" (${filteredProducts.length} MÓN)`
-                : selectedCategory !== "ALL"
-                ? `🍹 ${currentCategoryInfo.name.toUpperCase()} (${filteredProducts.length} MÓN)`
-                : priceFilter !== "ALL"
-                ? `💰 KẾT QUẢ THEO GIÁ (${filteredProducts.length} MÓN)`
-                : `📋 THỰC ĐƠN TỔNG HỢP (${filteredProducts.length} MÓN)`}
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
+              <h2 className="text-xs sm:text-sm font-black text-neutral-900 uppercase tracking-wider">
+                {searchQuery.trim()
+                  ? `🔍 KẾT QUẢ TÌM KIẾM CHO "${searchQuery}" (${filteredProducts.length} MÓN)`
+                  : selectedCategory !== "ALL"
+                  ? `🍹 ${currentCategoryInfo.name.toUpperCase()} (${filteredProducts.length} MÓN)`
+                  : priceFilter !== "ALL"
+                  ? `💰 KẾT QUẢ THEO GIÁ (${filteredProducts.length} MÓN)`
+                  : `📋 THỰC ĐƠN TỔNG HỢP (${filteredProducts.length} MÓN)`}
+              </h2>
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-800 bg-brand-50/80 border border-brand-200/60 px-2.5 py-1 rounded-lg w-fit">
+                <Truck className="w-3.5 h-3.5 text-brand-700 flex-shrink-0" />
+                <span>Giao tận nơi Sầm Sơn &amp; lân cận</span>
+              </div>
+            </div>
             <div className="w-full max-w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
               {filteredProducts.map((product) => (
                 <ProductCard
@@ -1379,6 +1436,17 @@ export default function StorefrontHomePage() {
           </div>
         }
       >
+        {/* THÔNG BÁO PHẠM VI GIAO HÀNG TRONG GIỎ HÀNG */}
+        <div className="mb-3 p-2.5 bg-amber-50/90 rounded-xl border border-amber-200/80 space-y-1 text-xs select-none">
+          <div className="flex items-center gap-1.5 font-bold text-amber-950">
+            <Truck className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+            <span>Phạm vi giao hàng: Sầm Sơn &amp; lân cận</span>
+          </div>
+          <p className="text-[11px] text-amber-900/90 font-medium leading-relaxed">
+            Trà Sữa Dino hiện chỉ phục vụ giao hàng trong khu vực Sầm Sơn, Thanh Hóa &amp; các khu vực lân cận. Vui lòng kiểm tra địa chỉ trước khi đặt.
+          </p>
+        </div>
+
         <div className="space-y-3 divide-y divide-neutral-100">
           {cart.map((item) => (
             <div key={item.id} className="pt-3 first:pt-0 flex items-start justify-between gap-2.5 text-xs">
@@ -1554,6 +1622,17 @@ export default function StorefrontHomePage() {
             )}
           </div>
 
+          {/* THÔNG BÁO PHẠM VI GIAO HÀNG TẠI CHECKOUT */}
+          <div className="p-3 bg-amber-50/90 rounded-2xl border border-amber-200/90 space-y-1 text-xs select-none">
+            <div className="flex items-center gap-1.5 font-bold text-amber-950">
+              <Truck className="w-4 h-4 text-amber-700 flex-shrink-0" />
+              <span>Phạm vi giao hàng</span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-amber-900 font-medium leading-relaxed">
+              Trà Sữa Dino hiện chỉ giao hàng trong khu vực <strong>Sầm Sơn, Thanh Hóa</strong> và các khu vực lân cận thuộc phạm vi phục vụ.
+            </p>
+          </div>
+
           {/* Địa chỉ giao hàng (GPS) */}
           <div>
             <AddressLocationPicker
@@ -1570,6 +1649,40 @@ export default function StorefrontHomePage() {
               required={true}
               error={formErrors.address}
             />
+
+            {/* CẢNH BÁO THÂN THIỆN NẾU ĐỊA CHỈ THUỘC TỈNH/THÀNH PHỐ XA */}
+            {isAddressOutsideScope && (
+              <div className="mt-2.5 p-3 bg-amber-50/95 border border-amber-300/90 rounded-2xl text-xs space-y-2 animate-in fade-in select-none">
+                <div className="flex items-start gap-2 text-amber-950">
+                  <span className="text-base flex-shrink-0">⚠️</span>
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-amber-950">
+                      Địa chỉ của bạn có thể nằm ngoài phạm vi giao hàng trực tiếp.
+                    </p>
+                    <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
+                      Trà Sữa Dino hiện phục vụ giao hàng tại Sầm Sơn và các khu vực lân cận. Vui lòng liên hệ hotline quán để được hỗ trợ kiểm tra tuyến giao nhanh nhất.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t border-amber-200">
+                  <a
+                    href="tel:0858798206"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 hover:bg-emerald-50 transition-colors shadow-2xs"
+                  >
+                    <Phone className="w-3 h-3 text-emerald-700" />
+                    <span>Gọi 0858798206 xác nhận</span>
+                  </a>
+                  <a
+                    href="https://zalo.me/0858798206"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 bg-white px-2.5 py-1 rounded-lg border border-sky-300 hover:bg-sky-50 transition-colors shadow-2xs"
+                  >
+                    <span>Chat Zalo</span>
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Ghi chú */}

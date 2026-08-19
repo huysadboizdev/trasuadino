@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Phone, MapPin, ShieldCheck, FileText, Clock, ExternalLink } from "lucide-react";
+import { Phone, MapPin, ShieldCheck, FileText, Clock, ExternalLink, Truck } from "lucide-react";
 
 export function Footer() {
   return (
@@ -143,6 +143,19 @@ export function Footer() {
                     </span>
                   </div>
                 </a>
+              </div>
+
+              {/* Phạm vi giao hàng */}
+              <div className="pt-2 border-t border-neutral-100 flex items-start gap-2.5 text-neutral-700">
+                <div className="h-7 w-7 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Truck className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[11px] text-neutral-500 font-medium block leading-none mb-0.5">Phạm vi giao hàng</span>
+                  <span className="font-medium text-neutral-700 text-xs sm:text-sm leading-snug">
+                    Trà Sữa Dino hiện chỉ nhận giao hàng trong khu vực <strong>Sầm Sơn, Thanh Hóa</strong> và các khu vực lân cận thuộc phạm vi phục vụ.
+                  </span>
+                </div>
               </div>
             </address>
           </div>
