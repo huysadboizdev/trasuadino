@@ -13,6 +13,7 @@ import {
   Coupon,
   VoucherUsage,
   RefreshSession,
+  PaymentTransaction,
 } from "./types";
 import { nhungCategories, nhungProducts } from "./nhungMenuData";
 import { normalizeCoupon, validateVoucherEngine, ValidateVoucherResult } from "./voucherService";
@@ -26,6 +27,7 @@ interface StoreState {
   voucherUsages: VoucherUsage[];
   refreshSessions: RefreshSession[];
   rotatedTokensHistory: { tokenHash: string; familyId: string; rotatedAt: string }[];
+  paymentTransactions?: PaymentTransaction[];
   settings: StoreSetting;
 }
 
@@ -535,18 +537,69 @@ export const dataStore = {
     }
     return null;
   },
-  markOrderPaidByCode: (orderCode: string) => {
+  markOrderPaidByCode: (
+    orderCode: string,
+    details?: {
+      amount?: number;
+      transactionCode?: string;
+      content?: string;
+      rawData?: any;
+    }
+  ) => {
     const store = getStore();
+    const raw = orderCode.trim();
+    const cleanUpper = raw.replace(/^#/, "").trim().toUpperCase();
+
     const ord = store.orders.find(
-      (o) => o.orderCode.toLowerCase() === orderCode.toLowerCase()
+      (o) =>
+        o.orderCode.toLowerCase() === raw.toLowerCase() ||
+        o.orderCode.toUpperCase() === cleanUpper ||
+        o.id === raw
     );
     if (ord) {
+      const wasAlreadyPaid = ord.paymentStatus === "PAID";
       ord.paymentStatus = "PAID";
       ord.updatedAt = new Date().toISOString();
+
+      if (!store.paymentTransactions) {
+        store.paymentTransactions = [];
+      }
+
+      const txCode = details?.transactionCode || `TX-${Date.now()}`;
+      const existingTx = store.paymentTransactions.find(
+        (t) => t.transactionCode === txCode && t.orderId === ord.id
+      );
+
+      if (!existingTx) {
+        const newTx: PaymentTransaction = {
+          id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          orderId: ord.id,
+          orderCode: ord.orderCode,
+          gateway: "SEPAY",
+          transactionCode: txCode,
+          amount: details?.amount || ord.totalAmount,
+          content: details?.content || ord.orderCode,
+          status: "SUCCESS",
+          rawData: details?.rawData ? JSON.stringify(details.rawData) : undefined,
+          createdAt: new Date().toISOString(),
+        };
+        store.paymentTransactions.unshift(newTx);
+      }
+
       saveStoreToFile(store);
-      return ord;
+      return { order: ord, wasAlreadyPaid };
     }
     return null;
+  },
+  getPaymentTransactions: (orderId?: string) => {
+    const store = getStore();
+    if (!store.paymentTransactions) store.paymentTransactions = [];
+    if (orderId) {
+      return store.paymentTransactions.filter(
+        (t) => t.orderId === orderId || t.orderCode === orderId
+      );
+    }
+    return [...store.paymentTransactions];
   },
 
   // --- Coupons (Mã Giảm Giá - Voucher Engine) ---

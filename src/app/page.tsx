@@ -20,6 +20,7 @@ import {
 } from "@/components/customer/ProductCustomizationModal";
 import { ProductCard } from "@/components/customer/ProductCard";
 import { MissingProfileModal } from "@/components/customer/MissingProfileModal";
+import { SepayQrPaymentModal } from "@/components/payment/SepayQrPaymentModal";
 import { MapPin } from "lucide-react";
 
 interface CartItem {
@@ -1696,12 +1697,25 @@ export default function StorefrontHomePage() {
         </form>
       </BottomSheet>
 
-      {/* 9. MODAL ĐẶT HÀNG THÀNH CÔNG (TÁCH BIỆT RÕ RÀNG COD VÀ VIETQR) */}
-      {orderSuccess && (
+      {/* 9. MODAL ĐẶT HÀNG THÀNH CÔNG & THANH TOÁN QR */}
+      {orderSuccess && orderSuccess.paymentMethod === "SEPAY_QR" && (
+        <SepayQrPaymentModal
+          isOpen={Boolean(orderSuccess)}
+          onClose={() => setOrderSuccess(null)}
+          orderCode={orderSuccess.orderCode}
+          totalAmount={orderSuccess.totalAmount}
+          onPaymentSuccess={() => {
+            showToast(`🎉 Đơn hàng #${orderSuccess.orderCode} đã được thanh toán thành công!`, "success");
+          }}
+          onViewOrders={() => setIsUserOrdersOpen(true)}
+        />
+      )}
+
+      {orderSuccess && orderSuccess.paymentMethod === "COD" && (
         <BottomSheet
           isOpen={Boolean(orderSuccess)}
           onClose={() => setOrderSuccess(null)}
-          title={orderSuccess.paymentMethod === "COD" ? "❤️ CẢM ƠN BẠN!" : "ĐẶT HÀNG THÀNH CÔNG!"}
+          title="❤️ CẢM ƠN BẠN!"
           subtitle={`Mã đơn: #${orderSuccess.orderCode}`}
           maxWidth="md"
           footer={
@@ -1732,62 +1746,40 @@ export default function StorefrontHomePage() {
               </p>
             </div>
 
-            {orderSuccess.paymentMethod === "COD" ? (
-              /* GIAO DIỆN COD: TUYỆT ĐỐI KHÔNG CÓ BẤT KỲ MÃ QR NÀO */
-              <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200/80 text-left space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-amber-900 tracking-wider">
-                    PHƯƠNG THỨC THANH TOÁN
-                  </span>
-                  <Badge variant="warning" size="sm">
-                    💵 TIỀN MẶT KHI NHẬN (COD)
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-amber-200/60 text-xs">
-                  <span className="text-neutral-600 font-medium">Mã đơn hàng:</span>
-                  <span className="font-mono font-black text-sm text-brand-950">#{orderSuccess.orderCode}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-600 font-medium">Tổng tiền cần thanh toán:</span>
-                  <span className="font-black text-base text-brand-900">
-                    {formatCurrency(orderSuccess.totalAmount)}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-600 font-medium">Trạng thái đơn:</span>
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                    🟢 Quán đã nhận đơn
-                  </span>
-                </div>
-
-                <p className="text-[11px] text-amber-800 font-medium bg-white/80 p-2.5 rounded-xl border border-amber-200/60 text-center mt-1">
-                  💡 Bạn vui lòng chuẩn bị tiền mặt <b>{formatCurrency(orderSuccess.totalAmount)}</b> khi tài xế giao trà sữa tới nhé!
-                </p>
-              </div>
-            ) : (
-              /* GIAO DIỆN VIETQR SEPAY (CHỈ HIỆN KHI CHỌN QUÉT QR) */
-              <div className="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-200 space-y-2.5">
-                <Badge variant="success" size="sm">
-                  VIETQR SEPAY
+            {/* GIAO DIỆN COD: TUYỆT ĐỐI KHÔNG CÓ MÃ QR */}
+            <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200/80 text-left space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase text-amber-900 tracking-wider">
+                  PHƯƠNG THỨC THANH TOÁN
+                </span>
+                <Badge variant="warning" size="sm">
+                  💵 TIỀN MẶT KHI NHẬN (COD)
                 </Badge>
-                <p className="text-xs font-medium text-neutral-600">
-                  Quét mã chuyển khoản {formatCurrency(orderSuccess.totalAmount)}:
-                </p>
-                <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl border border-neutral-300 shadow-2xs flex items-center justify-center">
-                  <img
-                    src={`https://qr.sepay.vn/img?acc=0988888888&bank=MBBank&amount=${orderSuccess.totalAmount}&des=${orderSuccess.orderCode}`}
-                    alt="Mã QR VietQR SePay"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <p className="text-xs font-mono font-bold text-neutral-800 bg-white p-2 rounded-xl border border-neutral-200">
-                  Nội dung CK: <b>{orderSuccess.orderCode}</b>
-                </p>
               </div>
-            )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-amber-200/60 text-xs">
+                <span className="text-neutral-600 font-medium">Mã đơn hàng:</span>
+                <span className="font-mono font-black text-sm text-brand-950">#{orderSuccess.orderCode}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-neutral-600 font-medium">Tổng tiền cần thanh toán:</span>
+                <span className="font-black text-base text-brand-900">
+                  {formatCurrency(orderSuccess.totalAmount)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-neutral-600 font-medium">Trạng thái đơn:</span>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                  🟢 Quán đã nhận đơn
+                </span>
+              </div>
+
+              <p className="text-[11px] text-amber-800 font-medium bg-white/80 p-2.5 rounded-xl border border-amber-200/60 text-center mt-1">
+                💡 Bạn vui lòng chuẩn bị tiền mặt <b>{formatCurrency(orderSuccess.totalAmount)}</b> khi tài xế giao trà sữa tới nhé!
+              </p>
+            </div>
           </div>
         </BottomSheet>
       )}

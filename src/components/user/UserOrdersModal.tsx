@@ -6,6 +6,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Badge, BadgeVariant } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { ConfirmModal } from "../ui/ConfirmModal";
+import { SepayQrPaymentModal } from "../payment/SepayQrPaymentModal";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "../ui/Toast";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -375,40 +376,16 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
 
       {/* Modal Hiện QR SePay lại nếu đơn chưa thanh toán */}
       {selectedQrOrder && (
-        <BottomSheet
+        <SepayQrPaymentModal
           isOpen={Boolean(selectedQrOrder)}
           onClose={() => setSelectedQrOrder(null)}
-          title="MÃ VIETQR THANH TOÁN"
-          subtitle={`Đơn hàng #${selectedQrOrder.orderCode}`}
-          maxWidth="sm"
-          footer={
-            <Button
-              variant="primary"
-              size="md"
-              fullWidth
-              onClick={() => setSelectedQrOrder(null)}
-              className="bg-brand-900 text-white font-black"
-            >
-              ĐÓNG
-            </Button>
-          }
-        >
-          <div className="text-center space-y-3 py-2">
-            <p className="text-xs font-bold text-neutral-700">
-              Quét mã chuyển khoản {formatCurrency(selectedQrOrder.totalAmount)}:
-            </p>
-            <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl border border-neutral-300 shadow-sm flex items-center justify-center">
-              <img
-                src={`https://qr.sepay.vn/img?acc=0988888888&bank=MBBank&amount=${selectedQrOrder.totalAmount}&des=${selectedQrOrder.orderCode}`}
-                alt="Mã QR VietQR SePay"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <p className="text-xs font-mono font-black text-brand-950 bg-neutral-50 p-2.5 rounded-xl border border-neutral-200">
-              Nội dung: {selectedQrOrder.orderCode}
-            </p>
-          </div>
-        </BottomSheet>
+          orderCode={selectedQrOrder.orderCode}
+          totalAmount={selectedQrOrder.totalAmount}
+          onPaymentSuccess={() => {
+            fetchUserOrders();
+            showToast(`🎉 Đơn hàng #${selectedQrOrder.orderCode} đã được thanh toán thành công!`, "success");
+          }}
+        />
       )}
 
       {/* Custom Cancel Order Confirm Modal */}

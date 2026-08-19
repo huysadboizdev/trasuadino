@@ -222,3 +222,16 @@ export interface DashboardStats {
   completedOrdersCount: number;
   outOfStockProductsCount: number;
 }
+
+export interface PaymentTransaction {
+  id: string;
+  orderId: string;
+  orderCode?: string;
+  gateway: "SEPAY" | "CASH" | "BANK_TRANSFER" | "MOMO";
+  transactionCode?: string;
+  amount: number;
+  content?: string;
+  status: "PENDING" | "SUCCESS" | "FAILED";
+  rawData?: string;
+  createdAt: string;
+}
