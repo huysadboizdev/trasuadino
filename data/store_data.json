@@ -424,7 +424,7 @@
       "categoryName": "Cafe",
       "isAvailable": true,
       "isFeatured": false,
-      "salesCount": 145,
+      "salesCount": 146,
       "options": [
         {
           "id": "optg-size-ehua2e",
@@ -7218,6 +7218,33 @@
     }
   ],
   "orders": [
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "deliveryLat": 21.022107630414652,
+      "deliveryLng": 105.80130598469987,
+      "note": "",
+      "paymentMethod": "COD",
+      "paymentStatus": "PENDING",
+      "orderStatus": "NEW",
+      "subtotalAmount": 30000,
+      "discountAmount": 0,
+      "totalAmount": 30000,
+      "items": [
+        {
+          "productId": "nhung-cafe-3",
+          "productName": "Muối",
+          "quantity": 1,
+          "unitPrice": 30000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh)",
+          "totalPrice": 30000
+        }
+      ],
+      "id": "ord-1787132570091",
+      "orderCode": "DINO-940",
+      "createdAt": "2026-08-19T09:42:50.091Z"
+    },
     {
       "customerName": "Hà Quang Huy",
       "customerPhone": "0987789987",

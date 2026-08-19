@@ -379,13 +379,35 @@ export const dataStore = {
     }
     return list;
   },
-  getOrderById: (id: string) => {
+  getOrderById: (identifier: string) => {
     const store = getStore();
-    return store.orders.find((o) => o.id === id || o.orderCode === id);
+    if (!identifier) return null;
+    const raw = String(identifier).trim();
+    const cleanUpper = raw.replace(/^#/, "").trim().toUpperCase();
+    return (
+      store.orders.find(
+        (o) =>
+          o.id === raw ||
+          o.orderCode === raw ||
+          o.id.toUpperCase() === cleanUpper ||
+          o.orderCode.toUpperCase() === cleanUpper ||
+          (o.trackingToken && o.trackingToken === raw)
+      ) || null
+    );
   },
-  updateOrderStatus: (id: string, status: OrderStatus) => {
+  updateOrderStatus: (identifier: string, status: OrderStatus) => {
     const store = getStore();
-    const ord = store.orders.find((o) => o.id === id || o.orderCode === id);
+    if (!identifier) return null;
+    const raw = String(identifier).trim();
+    const cleanUpper = raw.replace(/^#/, "").trim().toUpperCase();
+    const ord = store.orders.find(
+      (o) =>
+        o.id === raw ||
+        o.orderCode === raw ||
+        o.id.toUpperCase() === cleanUpper ||
+        o.orderCode.toUpperCase() === cleanUpper ||
+        (o.trackingToken && o.trackingToken === raw)
+    );
     if (ord) {
       const prevStatus = ord.orderStatus;
       ord.orderStatus = status;
@@ -418,10 +440,14 @@ export const dataStore = {
   createOrder: (orderData: Omit<Order, "id" | "orderCode" | "createdAt">) => {
     const store = getStore();
     const codeNum = Math.floor(100 + Math.random() * 900);
+    const trackingToken = `trk_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const isGuest = !orderData.userId;
     const newOrder: Order = {
       ...orderData,
       id: `ord-${Date.now()}`,
       orderCode: `DINO-${codeNum}`,
+      trackingToken,
+      isGuest,
       createdAt: new Date().toISOString(),
     };
     store.orders.unshift(newOrder);
@@ -462,9 +488,18 @@ export const dataStore = {
     saveStoreToFile(store);
     return newOrder;
   },
-  deleteOrder: (id: string) => {
+  deleteOrder: (identifier: string) => {
     const store = getStore();
-    const idx = store.orders.findIndex((o) => o.id === id || o.orderCode === id);
+    if (!identifier) return null;
+    const raw = String(identifier).trim();
+    const cleanUpper = raw.replace(/^#/, "").trim().toUpperCase();
+    const idx = store.orders.findIndex(
+      (o) =>
+        o.id === raw ||
+        o.orderCode === raw ||
+        o.id.toUpperCase() === cleanUpper ||
+        o.orderCode.toUpperCase() === cleanUpper
+    );
     if (idx !== -1) {
       const removed = store.orders.splice(idx, 1)[0];
       // Xóa các bản ghi liên quan (voucherUsages) nếu có để tránh orphan data

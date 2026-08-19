@@ -796,7 +796,7 @@ export default function StorefrontHomePage() {
           paymentMethod: data.order.paymentMethod || paymentMethod,
         });
 
-        // Tự động lưu thông tin khách & mã đơn vào localStorage cho khách vãng lai
+        // Tự động lưu thông tin khách, mã đơn và tracking token vào localStorage cho khách vãng lai
         try {
           localStorage.setItem("dino_guest_name", customerName.trim());
           localStorage.setItem("dino_guest_phone", customerPhone.trim());
@@ -807,6 +807,15 @@ export default function StorefrontHomePage() {
           if (!existingOrders.includes(data.order.orderCode)) {
             existingOrders.unshift(data.order.orderCode);
             localStorage.setItem("dino_guest_orders", JSON.stringify(existingOrders.slice(0, 20)));
+          }
+
+          if (data.order.trackingToken) {
+            const rawTokens = localStorage.getItem("dino_guest_tracking_tokens");
+            const existingTokens: string[] = rawTokens ? JSON.parse(rawTokens) : [];
+            if (!existingTokens.includes(data.order.trackingToken)) {
+              existingTokens.unshift(data.order.trackingToken);
+              localStorage.setItem("dino_guest_tracking_tokens", JSON.stringify(existingTokens.slice(0, 20)));
+            }
           }
         } catch (e) {}
 

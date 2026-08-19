@@ -171,9 +171,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         {/* Customer Information (with Direct Call Button for Mobile / Copy for Desktop) */}
         <div className="bg-neutral-50 rounded-2xl p-3 sm:p-3.5 border border-neutral-200/80 mb-3.5 space-y-2 min-w-0">
           <div className="flex items-center justify-between gap-1.5 min-w-0">
-            <span className="text-xs font-black text-neutral-900 uppercase truncate min-w-0 flex-1">
-              {order.customerName}
-            </span>
+            <div className="flex items-center gap-1.5 truncate min-w-0 flex-1">
+              <span className="text-xs font-black text-neutral-900 uppercase truncate">
+                {order.customerName}
+              </span>
+              {!order.userId || order.isGuest ? (
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-black border border-emerald-200 flex-shrink-0">
+                  KHÁCH VÃNG LAI
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[9px] font-black border border-blue-200 flex-shrink-0">
+                  THÀNH VIÊN
+                </span>
+              )}
+            </div>
             <PhoneActionButton phone={order.customerPhone} />
           </div>
 

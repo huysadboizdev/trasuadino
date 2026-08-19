@@ -104,7 +104,7 @@ export async function renderOrderDetail(
 ) {
   const order = dataStore.getOrderById(orderId);
   if (!order) {
-    const errorText = `❌ <b>Không tìm thấy đơn hàng mã "${orderId}"</b>.`;
+    const errorText = `❌ <b>Đơn hàng "${orderId}" không còn tồn tại hoặc đã bị xóa.</b>`;
     if (messageId) return await editTelegramMessageText(chatId, messageId, errorText, { reply_markup: keyboards.backToDashboard() });
     return await sendTelegramMessage(chatId, errorText, { reply_markup: keyboards.backToDashboard() });
   }
@@ -132,6 +132,8 @@ export async function renderOrderDetail(
       ? "⏳ CHƯA THANH TOÁN"
       : "❌ ĐÃ HỦY";
 
+  const customerTypeBadge = !order.userId || order.isGuest ? "🟢 Khách vãng lai" : "🔵 Thành viên";
+
   let itemsText = "";
   order.items.forEach((it, idx) => {
     const itemTotal = new Intl.NumberFormat("vi-VN").format(it.totalPrice);
@@ -150,12 +152,12 @@ export async function renderOrderDetail(
   const text = `📦 <b>CHI TIẾT ĐƠN HÀNG #${order.orderCode}</b>
 ━━━━━━━━━━━━━━━━━━━━━
 👤 <b>Khách hàng:</b> ${order.customerName}
+🏷️ <b>Phân loại:</b> ${customerTypeBadge}
 📞 <b>Số điện thoại:</b> <code>${order.customerPhone}</code>
 📍 <b>Địa chỉ:</b> ${order.deliveryAddress}
 ${order.note ? `📝 <b>Ghi chú:</b> <i>${order.note}</i>\n` : ""}
 📋 <b>DANH SÁCH MÓN:</b>
-${itemsText}
-━━━━━━━━━━━━━━━━━━━━━
+${itemsText}━━━━━━━━━━━━━━━━━━━━━
 ${voucherInfo}💰 <b>TỔNG TIỀN:</b> <code>${amountStr} ₫</code>
 💳 <b>Phương thức:</b> ${paymentMethodLabel}
 📊 <b>Thanh toán:</b> ${paymentStatusBadge}
@@ -178,12 +180,29 @@ export async function handleOrderStatusUpdate(
   newStatus: OrderStatus,
   telegramUserId: string | number
 ) {
-  const updatedOrder = dataStore.updateOrderStatus(orderId, newStatus);
+  // 1. Tìm đơn hàng qua ID / orderCode / trackingToken
+  const existingOrder = dataStore.getOrderById(orderId);
+  if (!existingOrder) {
+    return await editTelegramMessageText(
+      chatId,
+      messageId,
+      `❌ <b>Đơn hàng #${orderId} không còn tồn tại hoặc đã bị xóa.</b>\n<i>Vui lòng quay lại danh sách để kiểm tra các đơn mới nhất.</i>`,
+      { reply_markup: keyboards.backToDashboard() }
+    );
+  }
+
+  // 2. Idempotent check: Nếu đơn đã ở trạng thái này rồi, không báo lỗi mà hiển thị lại giao diện cập nhật
+  if (existingOrder.orderStatus === newStatus) {
+    return await renderOrderDetail(chatId, messageId, existingOrder.id);
+  }
+
+  // 3. Cập nhật trạng thái trong database
+  const updatedOrder = dataStore.updateOrderStatus(existingOrder.id, newStatus);
   if (!updatedOrder) {
     return await editTelegramMessageText(
       chatId,
       messageId,
-      "❌ <i>Không thể cập nhật trạng thái đơn. Đơn có thể đã bị xóa.</i>",
+      `❌ <b>Không thể cập nhật trạng thái đơn #${existingOrder.orderCode}.</b>`,
       { reply_markup: keyboards.backToDashboard() }
     );
   }
@@ -193,14 +212,14 @@ export async function handleOrderStatusUpdate(
     action: `UPDATE_ORDER_STATUS_${newStatus}`,
     resource: "ORDER",
     resourceId: updatedOrder.orderCode,
-    details: { newStatus },
+    details: { newStatus, previousStatus: existingOrder.orderStatus },
     result: "SUCCESS",
   });
 
-  // Bắn sự kiện realtime cập nhật sang Admin Web và Khách hàng
+  // 4. Bắn sự kiện realtime cập nhật sang Admin Web và Khách hàng
   realtimeHub.emitOrderStatusUpdated(updatedOrder);
 
-  // Re-render chi tiết đơn đã cập nhật
+  // 5. Re-render chi tiết đơn đã cập nhật
   return await renderOrderDetail(chatId, messageId, updatedOrder.id);
 }
 

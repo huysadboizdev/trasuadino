@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
     const email = searchParams.get("email") || undefined;
     const phone = searchParams.get("phone") || undefined;
     const codes = searchParams.get("codes") || undefined;
+    const token = searchParams.get("token") || undefined;
+    const tokens = searchParams.get("tokens") || undefined;
 
     let orders = dataStore.getOrders();
 
@@ -20,6 +22,11 @@ export async function GET(req: NextRequest) {
     } else if (phone) {
       const cleanPhone = phone.trim().replace(/\s/g, "");
       orders = orders.filter((o) => o.customerPhone.replace(/\s/g, "") === cleanPhone);
+    } else if (token) {
+      orders = orders.filter((o) => o.trackingToken === token.trim());
+    } else if (tokens) {
+      const tokenList = tokens.split(",").map((t) => t.trim()).filter(Boolean);
+      orders = orders.filter((o) => o.trackingToken && tokenList.includes(o.trackingToken));
     } else if (codes) {
       const codeList = codes
         .split(",")

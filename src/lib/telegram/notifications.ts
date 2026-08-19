@@ -31,17 +31,19 @@ export async function notifyTelegramNewOrder(order: Order) {
     voucherInfo = `🎟 <b>Voucher:</b> <code>${order.couponCode}</code> (-${discountStr}₫)\n`;
   }
 
+  const customerBadge = !order.userId || order.isGuest ? "🟢 <b>Loại khách:</b> KHÁCH VÃNG LAI\n" : "🔵 <b>Loại khách:</b> THÀNH VIÊN\n";
+
   const text = `🚨 <b>ĐƠN HÀNG MỚI #${order.orderCode}</b>
 ━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Khách:</b> ${order.customerName}
-📞 <b>SĐT:</b> <code>${order.customerPhone}</code>
+👤 <b>Khách hàng:</b> ${order.customerName}
+${customerBadge}📞 <b>SĐT:</b> <code>${order.customerPhone}</code>
 📍 <b>Giao đến:</b> ${order.deliveryAddress}
 ${order.note ? `📝 <b>Ghi chú:</b> <i>${order.note}</i>\n` : ""}
-📋 <b>MÓN ĐÃ ĐẶT:</b>
+📋 <b>DANH SÁCH MÓN:</b>
 ${itemsList}━━━━━━━━━━━━━━━━━━━━━
 ${voucherInfo}💰 <b>TỔNG TIỀN:</b> <code>${amountStr} ₫</code>
-💳 <b>Hình thức:</b> ${paymentMethodLabel}
-📊 <b>Thanh toán:</b> ${paymentStatusBadge}`;
+💵 <b>Hình thức:</b> ${paymentMethodLabel}
+🟡 <b>Trạng thái:</b> MỚI NHẬN`;
 
   const markup = {
     inline_keyboard: [

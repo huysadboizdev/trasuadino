@@ -169,6 +169,8 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderCode: string;
+  trackingToken?: string; // Token bảo mật dành cho khách vãng lai theo dõi đơn
+  isGuest?: boolean; // Đánh dấu đơn của khách vãng lai (không đăng nhập)
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
