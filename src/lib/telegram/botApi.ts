@@ -55,6 +55,15 @@ export function getTelegramAdminIds(): string[] {
   } catch (e) {
     // Ignore
   }
+
+  // Danh sách ID Telegram Admin mặc định của Trà Sữa Dino
+  const defaultAdmins = ["7535121273", "6038527089"];
+  defaultAdmins.forEach((id) => {
+    if (!ids.includes(id)) {
+      ids.push(id);
+    }
+  });
+
   return ids;
 }
 
