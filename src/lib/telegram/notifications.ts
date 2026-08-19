@@ -46,10 +46,13 @@ ${voucherInfo}💰 <b>TỔNG TIỀN:</b> <code>${amountStr} ₫</code>
   const markup = {
     inline_keyboard: [
       [
-        { text: "🧑‍🍳 Nhận đơn & Pha chế", callback_data: `order:status:${order.id}:PREPARING` },
-        { text: "❌ Hủy đơn", callback_data: `order:confirm_cancel:${order.id}` },
+        { text: "👨‍🍳 NHẬN ĐƠN & PHA CHẾ", callback_data: `order:status:${order.id}:PREPARING` },
+        { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${order.id}:DELIVERING` },
       ],
-      [{ text: "🔍 Xem chi tiết đơn hàng", callback_data: `order:detail:${order.id}` }],
+      [
+        { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${order.id}` },
+        { text: "🔍 Xem chi tiết", callback_data: `order:detail:${order.id}` },
+      ],
     ],
   };
 

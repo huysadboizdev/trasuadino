@@ -2,6 +2,7 @@ import { dataStore } from "../../store";
 import { keyboards } from "../keyboards";
 import { editTelegramMessageText, sendTelegramMessage } from "../botApi";
 import { logTelegramAudit } from "../security";
+import { realtimeHub } from "../../realtime";
 import { OrderStatus } from "../../types";
 
 const PAGE_SIZE = 6;
@@ -196,6 +197,9 @@ export async function handleOrderStatusUpdate(
     result: "SUCCESS",
   });
 
+  // Bắn sự kiện realtime cập nhật sang Admin Web và Khách hàng
+  realtimeHub.emitOrderStatusUpdated(updatedOrder);
+
   // Re-render chi tiết đơn đã cập nhật
   return await renderOrderDetail(chatId, messageId, updatedOrder.id);
 }
@@ -235,6 +239,9 @@ export async function handleExecuteCancelOrder(
     resourceId: updatedOrder.orderCode,
     result: "SUCCESS",
   });
+
+  // Bắn sự kiện realtime cập nhật sang Admin Web và Khách hàng
+  realtimeHub.emitOrderStatusUpdated(updatedOrder);
 
   return await renderOrderDetail(chatId, messageId, updatedOrder.id);
 }

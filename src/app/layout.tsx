@@ -4,8 +4,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
-  title: "Trà Sữa Dino - Hệ Thống Quản Trị & Bán Hàng",
-  description: "Web bán trà sữa, bánh ngọt & đồ ăn vặt tối ưu trên điện thoại và máy tính",
+  title: "Trà Sữa Dino - Uống là mê, Ăn là ghiền",
+  description: "Web bán trà sữa, bánh ngọt & đồ ăn vặt",
 };
 
 export const viewport: Viewport = {

@@ -23,12 +23,24 @@ export function getTelegramBotToken(): string | null {
 
 export function getTelegramAdminIds(): string[] {
   const ids: string[] = [];
-  if (process.env.TELEGRAM_ADMIN_IDS) {
-    process.env.TELEGRAM_ADMIN_IDS.split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .forEach((id) => ids.push(id));
-  }
+
+  const envSources = [
+    process.env.TELEGRAM_ADMIN_IDS,
+    process.env.TELEGRAM_ADMIN_CHAT_ID,
+    process.env.TELEGRAM_ADMIN_ID,
+  ];
+
+  envSources.forEach((src) => {
+    if (src) {
+      src.split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .forEach((id) => {
+          if (!ids.includes(id)) ids.push(id);
+        });
+    }
+  });
+
   try {
     const settings = dataStore.getSettings();
     if ((settings as any).telegramAdminChatIds) {
