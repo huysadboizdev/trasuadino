@@ -1,0 +1,62 @@
+name: Deploy Trasuadino
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+
+          script: |
+            set -e
+
+            cd /var/trasuadino
+
+            echo "===== BACKUP RUNTIME DATA ====="
+
+            mkdir -p /var/trasuadino-runtime
+
+            if [ -f data/store_data.json ]; then
+              cp data/store_data.json /var/trasuadino-runtime/store_data.json
+            fi
+
+            echo "===== UPDATE CODE ====="
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "===== RESTORE RUNTIME DATA ====="
+
+            if [ -f /var/trasuadino-runtime/store_data.json ]; then
+              cp /var/trasuadino-runtime/store_data.json data/store_data.json
+            fi
+
+            echo "===== INSTALL DEPENDENCIES ====="
+
+            npm ci
+
+            echo "===== PRISMA GENERATE ====="
+
+            npx prisma generate
+
+            echo "===== BUILD NEXT.JS ====="
+
+            npm run build
+
+            echo "===== RESTART PM2 ====="
+
+            pm2 restart trasuadino
+
+            echo "===== DEPLOY SUCCESS ====="
+
+            pm2 status
