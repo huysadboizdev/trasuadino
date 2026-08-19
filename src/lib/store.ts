@@ -156,6 +156,19 @@ export function getStore(): StoreState {
             });
           }
 
+          // Đảm bảo có tài khoản Khách Vãng Lai hệ thống cố định
+          const hasSystemGuest = parsed.users.some(
+            (u: User) => u.id === "usr-system-guest"
+          );
+          if (!hasSystemGuest) {
+            parsed.users.push({
+              id: "usr-system-guest",
+              name: "Khách Vãng Lai (System)",
+              role: "CUSTOMER",
+              createdAt: new Date().toISOString(),
+            });
+          }
+
           global.__STORE__ = parsed;
           return parsed;
         }
@@ -441,11 +454,13 @@ export const dataStore = {
     const store = getStore();
     const codeNum = Math.floor(100 + Math.random() * 900);
     const trackingToken = `trk_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-    const isGuest = !orderData.userId;
+    const finalUserId = (orderData.userId && orderData.userId.trim()) || "usr-system-guest";
+    const isGuest = !orderData.userId || orderData.userId === "usr-system-guest";
     const newOrder: Order = {
       ...orderData,
       id: `ord-${Date.now()}`,
       orderCode: `DINO-${codeNum}`,
+      userId: finalUserId,
       trackingToken,
       isGuest,
       createdAt: new Date().toISOString(),
@@ -641,7 +656,7 @@ export const dataStore = {
   // --- Users & Authentication & Profile CRUD ---
   getUsers: () => {
     const store = getStore();
-    return store.users;
+    return store.users.filter((u) => u.id !== "usr-system-guest");
   },
   findUserByEmail: (email: string) => {
     const store = getStore();

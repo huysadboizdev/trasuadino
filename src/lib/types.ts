@@ -1,5 +1,7 @@
 export type UserRole = "ADMIN" | "STAFF" | "CUSTOMER";
 
+export const SYSTEM_GUEST_USER_ID = "usr-system-guest";
+
 export interface SavedAddress {
   id: string;
   label: string; // Nhà riêng, Công ty, Trường học...

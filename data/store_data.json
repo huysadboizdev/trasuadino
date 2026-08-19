@@ -2873,7 +2873,7 @@
       "categoryName": "Trà Sữa Mix Kem",
       "isAvailable": true,
       "isFeatured": true,
-      "salesCount": 245,
+      "salesCount": 246,
       "options": [
         {
           "id": "optg-size-osldms",
@@ -3371,7 +3371,7 @@
       "categoryName": "Trà Sữa Mix Kem",
       "isAvailable": true,
       "isFeatured": true,
-      "salesCount": 240,
+      "salesCount": 242,
       "options": [
         {
           "id": "optg-size-yjuhhe",
@@ -7223,6 +7223,87 @@
       "customerPhone": "0987789987",
       "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
       "note": "",
+      "paymentMethod": "SEPAY_QR",
+      "paymentStatus": "PENDING",
+      "orderStatus": "NEW",
+      "subtotalAmount": 35000,
+      "discountAmount": 0,
+      "totalAmount": 35000,
+      "items": [
+        {
+          "productId": "nhung-mk-21",
+          "productName": "Trà Sữa Sốt Khoai Môn Yến Mạch",
+          "quantity": 1,
+          "unitPrice": 35000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh)",
+          "totalPrice": 35000
+        }
+      ],
+      "id": "ord-1787137368439",
+      "orderCode": "DINO-414",
+      "trackingToken": "trk_1787137368439_90b8bt3k",
+      "isGuest": true,
+      "createdAt": "2026-08-19T11:02:48.439Z"
+    },
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "note": "",
+      "paymentMethod": "COD",
+      "paymentStatus": "PENDING",
+      "orderStatus": "NEW",
+      "subtotalAmount": 35000,
+      "discountAmount": 0,
+      "totalAmount": 35000,
+      "items": [
+        {
+          "productId": "nhung-mk-21",
+          "productName": "Trà Sữa Sốt Khoai Môn Yến Mạch",
+          "quantity": 1,
+          "unitPrice": 35000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh)",
+          "totalPrice": 35000
+        }
+      ],
+      "id": "ord-1787137012527",
+      "orderCode": "DINO-484",
+      "trackingToken": "trk_1787137012527_9qt2znxj",
+      "isGuest": true,
+      "createdAt": "2026-08-19T10:56:52.527Z"
+    },
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "note": "",
+      "paymentMethod": "COD",
+      "paymentStatus": "PENDING",
+      "orderStatus": "NEW",
+      "subtotalAmount": 35000,
+      "discountAmount": 0,
+      "totalAmount": 35000,
+      "items": [
+        {
+          "productId": "nhung-mk-18",
+          "productName": "Olong Nhài Kem Dừa Nướng",
+          "quantity": 1,
+          "unitPrice": 35000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh)",
+          "totalPrice": 35000
+        }
+      ],
+      "id": "ord-1787136892366",
+      "orderCode": "DINO-661",
+      "trackingToken": "trk_1787136892366_6hj53xgl",
+      "isGuest": true,
+      "createdAt": "2026-08-19T10:54:52.366Z"
+    },
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "note": "",
       "paymentMethod": "COD",
       "paymentStatus": "PENDING",
       "orderStatus": "NEW",
@@ -7948,6 +8029,12 @@
       "role": "ADMIN",
       "address": "Cửa hàng chính",
       "createdAt": "2026-08-18T14:36:19.939Z"
+    },
+    {
+      "id": "usr-system-guest",
+      "name": "Khách Vãng Lai (System)",
+      "role": "CUSTOMER",
+      "createdAt": "2026-08-19T11:08:17.196Z"
     }
   ],
   "settings": {
