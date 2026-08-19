@@ -115,9 +115,9 @@ export function Footer() {
                     </svg>
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] text-neutral-500 font-medium block leading-none mb-0.5">Fanpage Facebook</span>
+                    <span className="text-[11px] text-neutral-500 font-medium block leading-none mb-0.5">Facebook: Nhung Quinn</span>
                     <span className="font-bold text-neutral-900 flex items-center gap-1">
-                      Facebook của Trà Sữa Dino
+                      Facebook: Nhung Quinn
                       <ExternalLink className="w-3 h-3 text-neutral-400 group-hover:text-blue-600 inline" />
                     </span>
                   </div>

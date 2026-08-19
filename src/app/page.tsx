@@ -855,18 +855,30 @@ export default function StorefrontHomePage() {
 
   return (
     <div className="min-h-screen bg-[#faf8f5] text-neutral-900 selection:bg-brand-500 selection:text-white flex flex-col justify-between">
-      {/* 0. ANNOUNCEMENT BAR: PHẠM VI GIAO HÀNG */}
+      {/* 0. ANNOUNCEMENT BAR: ĐỊA CHỈ QUÁN & PHẠM VI GIAO HÀNG */}
       <aside
-        aria-label="Thông báo phạm vi giao hàng"
-        className="w-full bg-gradient-to-r from-[#2c1209] via-[#482017] to-[#2c1209] text-amber-100 text-[11px] sm:text-xs font-semibold py-1.5 px-3 text-center border-b border-brand-900/50 select-none shadow-2xs"
+        aria-label="Thông tin địa chỉ quán và phạm vi giao hàng"
+        className="w-full bg-gradient-to-r from-[#2c1209] via-[#482017] to-[#2c1209] text-amber-100 text-[11px] sm:text-xs font-semibold py-1.5 px-3 border-b border-brand-900/50 select-none shadow-2xs"
       >
-        <div className="max-w-6xl mx-auto flex items-center justify-center gap-1.5 flex-wrap">
-          <span className="inline-flex items-center gap-1 text-amber-300 font-bold">
-            <Truck className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>Giao hàng:</span>
-          </span>
-          <span className="text-white font-semibold">Chỉ giao hàng khu vực Sầm Sơn &amp; lân cận</span>
-          <span className="hidden md:inline text-amber-200/80">• Giao nhanh 15-30 phút</span>
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 flex-wrap">
+          {/* Địa chỉ quán có link Google Maps */}
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=740+Đường+Triệu+Quốc+Đạt,+Triệu+Sơn,+Thanh+Hóa"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-amber-200 hover:text-white transition-colors"
+            title="Bấm để xem vị trí quán trên Google Maps"
+          >
+            <MapPin className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <span className="font-bold text-white">Địa chỉ:</span>
+            <span className="truncate">740, Đường Triệu Quốc Đạt, Triệu Sơn, Thanh Hóa</span>
+          </a>
+
+          {/* Phạm vi giao hàng */}
+          <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-100">
+            <Truck className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+            <span>Chỉ giao hàng khu vực <strong>Sầm Sơn &amp; lân cận</strong> (15-30p)</span>
+          </div>
         </div>
       </aside>
 
@@ -904,10 +916,16 @@ export default function StorefrontHomePage() {
               <span>🚚</span>
               <span className="text-neutral-800">Giao nhanh 15-30p</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-neutral-50/80 border border-neutral-200/60 px-3 py-1.5 rounded-xl shadow-2xs">
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=740+Đường+Triệu+Quốc+Đạt,+Triệu+Sơn,+Thanh+Hóa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 bg-neutral-50/80 hover:bg-neutral-100 border border-neutral-200/60 px-3 py-1.5 rounded-xl shadow-2xs transition-colors"
+              title="Xem bản đồ 740 Đường Triệu Quốc Đạt, Triệu Sơn"
+            >
               <span>📍</span>
-              <span className="text-neutral-800">Định vị GPS tận nơi</span>
-            </div>
+              <span className="text-neutral-800 font-bold">740 Triệu Quốc Đạt</span>
+            </a>
             <div className="flex items-center gap-1.5 bg-neutral-50/80 border border-neutral-200/60 px-3 py-1.5 rounded-xl shadow-2xs">
               <span>🍃</span>
               <span className="text-neutral-800">100% Trà tươi sạch</span>
@@ -981,7 +999,7 @@ export default function StorefrontHomePage() {
       {/* 2. MAIN BODY */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3.5 sm:py-6 space-y-4 sm:space-y-6 w-full max-w-full">
         {/* Banner Header Thương Hiệu Màu Nâu Đậm */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#2c1209] via-[#461e14] to-[#240c06] text-white px-3.5 py-2.5 sm:px-5 sm:py-3.5 md:px-6 md:py-4 shadow-md border border-amber-950/60 sm:border-brand-900/40 flex items-center justify-between gap-2.5 sm:gap-4 w-full min-w-0">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#2c1209] via-[#461e14] to-[#240c06] text-white px-3.5 py-3 sm:px-5 sm:py-4 md:px-6 md:py-5 shadow-md border border-amber-950/60 sm:border-brand-900/40 flex items-center justify-between gap-2.5 sm:gap-4 w-full min-w-0">
           {/* Lớp ánh sáng ấm nhẹ làm nền thêm chiều sâu */}
           <div
             className="pointer-events-none absolute -right-10 -top-10 w-36 h-36 bg-amber-500/10 rounded-full blur-2xl"
@@ -990,45 +1008,85 @@ export default function StorefrontHomePage() {
 
           {/* Cụm Bên Trái: Logo "Nhung" + Tên Thương Hiệu + Slogan */}
           <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
-            <NhungLogoBadge className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12" />
+            <NhungLogoBadge className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 flex-shrink-0" />
             <div className="min-w-0 flex-1">
-              <h1 className="text-[13px] sm:text-base md:text-lg lg:text-xl font-extrabold text-white leading-snug sm:leading-tight truncate tracking-tight">
+              <h1 className="text-sm sm:text-base md:text-lg lg:text-xl font-extrabold text-white leading-snug sm:leading-tight truncate tracking-tight">
                 Trà Sữa &amp; Bánh Tươi Dino
               </h1>
-              <p className="text-[10px] sm:text-xs md:text-sm text-amber-200/90 font-medium truncate mt-0.5 sm:mt-1 flex items-center gap-1.5">
+              <p className="text-[11px] sm:text-xs md:text-sm text-amber-200/90 font-medium truncate mt-0.5 flex items-center gap-1.5">
                 Ủ trà tươi mỗi ngày • Giao nhanh 15-30p
               </p>
             </div>
           </div>
 
-          {/* Cụm Bên Phải: Nút GPS Tân Cửa với Icon MapPin */}
+          {/* Cụm Bên Phải: Nút Xem Địa Chỉ Quán Trên Bản Đồ */}
           <div className="flex items-center flex-shrink-0">
-            <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-xs text-amber-50 shadow-2xs transition-all select-none cursor-default">
-              <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 flex-shrink-0" />
-              <span className="text-[10px] sm:text-xs md:text-sm font-bold whitespace-nowrap">
-                GPS Tân Cửa
-              </span>
-            </div>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=740+Đường+Triệu+Quốc+Đạt,+Triệu+Sơn,+Thanh+Hóa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/15 hover:bg-white/25 border border-white/20 backdrop-blur-xs text-amber-50 shadow-2xs transition-all select-none active:scale-95 group"
+              title="Bấm để xem vị trí quán trên Google Maps"
+            >
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 flex-shrink-0 group-hover:scale-110 transition-transform" />
+              <div className="text-left">
+                <span className="text-[9px] text-amber-200 block leading-none font-medium">Địa chỉ quán:</span>
+                <span className="text-[10px] sm:text-xs md:text-sm font-bold whitespace-nowrap text-white">
+                  740 Triệu Quốc Đạt
+                </span>
+              </div>
+            </a>
           </div>
         </div>
 
-        {/* CỤM THÔNG BÁO PHẠM VI GIAO HÀNG TRANG CHỦ */}
-        <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 text-xs shadow-2xs select-none">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-800 flex items-center justify-center flex-shrink-0 font-black">
-              <Truck className="w-4 h-4 text-amber-800" />
+        {/* CỤM CARD THÔNG TIN ĐỊA CHỈ & PHẠM VI GIAO HÀNG NỔI BẬT */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 w-full">
+          {/* Card 1: Địa chỉ cửa hàng */}
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=740+Đường+Triệu+Quốc+Đạt,+Triệu+Sơn,+Thanh+Hóa"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group bg-white hover:bg-neutral-50/80 border border-neutral-200/90 hover:border-brand-300 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs transition-all"
+            title="Bấm xem đường đi đến quán trên Google Maps"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase text-rose-700 tracking-wider">
+                    ĐỊA CHỈ CỬA HÀNG
+                  </span>
+                  <span className="text-[9px] bg-rose-100 text-rose-800 font-bold px-1.5 py-0.2 rounded">
+                    Google Maps ↗
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm font-bold text-neutral-900 truncate mt-0.5">
+                  740, Đường Triệu Quốc Đạt, Triệu Sơn, Thanh Hóa
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="font-black text-amber-950 text-xs sm:text-sm">
-                🚚 Giao hàng tận nơi: Sầm Sơn &amp; các khu vực lân cận
-              </p>
-              <p className="text-[11px] text-amber-800/90 font-medium truncate mt-0.5">
-                Trà Sữa Dino hiện chỉ nhận giao hàng trong khu vực Sầm Sơn, Thanh Hóa và các khu vực lân cận thuộc phạm vi phục vụ.
-              </p>
+          </a>
+
+          {/* Card 2: Phạm vi giao hàng */}
+          <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs select-none">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/15 border border-amber-300/80 text-amber-800 flex items-center justify-center flex-shrink-0">
+                <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-amber-800" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase text-amber-800 tracking-wider">
+                  PHẠM VI GIAO HÀNG TẬN NƠI
+                </span>
+                <p className="text-xs sm:text-sm font-bold text-amber-950 truncate mt-0.5">
+                  Sầm Sơn, Thanh Hóa &amp; các khu vực lân cận
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-white/90 px-2.5 py-1 rounded-xl border border-amber-200/80 flex-shrink-0">
-            <span>⚡ Giao 15-30p</span>
+            <span className="hidden sm:inline-flex items-center text-[11px] font-bold text-amber-900 bg-white/90 px-2.5 py-1 rounded-xl border border-amber-200/80 flex-shrink-0">
+              ⚡ 15-30p
+            </span>
           </div>
         </div>
 
