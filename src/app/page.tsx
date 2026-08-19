@@ -303,9 +303,9 @@ export default function StorefrontHomePage() {
     phone: user?.phone || customerPhone,
     onOrderStatusUpdated: (updatedOrder) => {
       const statusLabels: Record<string, string> = {
-        PREPARING: `📦 Đơn #${updatedOrder.orderCode} đang được chuẩn bị!`,
+        PREPARING: `📦 Đơn #${updatedOrder.orderCode} đang được pha chế!`,
         DELIVERING: `🚚 Đơn #${updatedOrder.orderCode} đang được giao đến bạn!`,
-        COMPLETED: `✅ Đơn #${updatedOrder.orderCode} đã hoàn tất. Cảm ơn bạn!`,
+        COMPLETED: `🎉 ĐƠN HÀNG ĐÃ GIAO THÀNH CÔNG! Mã đơn: #${updatedOrder.orderCode}. Cảm ơn bạn đã mua hàng tại Trà Sữa Dino ❤️`,
         CANCELLED: `❌ Đơn #${updatedOrder.orderCode} đã bị hủy.`,
       };
       const msg = statusLabels[updatedOrder.orderStatus];

@@ -176,7 +176,6 @@ export default function AdminOrdersPage() {
       new: orders.filter((o) => o.orderStatus === "NEW").length,
       preparing: orders.filter((o) => o.orderStatus === "PREPARING").length,
       delivering: orders.filter((o) => o.orderStatus === "DELIVERING").length,
-      delivered: orders.filter((o) => o.orderStatus === "DELIVERED").length,
       completed: orders.filter((o) => o.orderStatus === "COMPLETED").length,
       cancelled: orders.filter((o) => o.orderStatus === "CANCELLED").length,
     };
@@ -207,12 +206,6 @@ export default function AdminOrdersPage() {
         label: "Đang giao",
         count: statusCounts.delivering,
         dotColor: "bg-sky-600",
-      },
-      {
-        id: "DELIVERED",
-        label: "Giao thành công",
-        count: statusCounts.delivered,
-        dotColor: "bg-teal-600",
       },
       {
         id: "COMPLETED",

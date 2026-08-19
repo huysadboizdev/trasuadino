@@ -15,8 +15,6 @@ function getStatusBadge(status: OrderStatus): string {
       return "🟠 ĐANG PHA CHẾ";
     case "DELIVERING":
       return "🔵 ĐANG GIAO";
-    case "DELIVERED":
-      return "🟢 GIAO HÀNG THÀNH CÔNG";
     case "COMPLETED":
       return "🟢 HOÀN TẤT";
     case "CANCELLED":
@@ -30,7 +28,6 @@ const statusNameMap: Record<OrderStatus, string> = {
   NEW: "MỚI NHẬN",
   PREPARING: "ĐANG PHA CHẾ",
   DELIVERING: "ĐANG GIAO",
-  DELIVERED: "GIAO HÀNG THÀNH CÔNG",
   COMPLETED: "HOÀN TẤT",
   CANCELLED: "ĐÃ HỦY",
 };

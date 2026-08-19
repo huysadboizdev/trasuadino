@@ -43,7 +43,6 @@ export const orderService = {
       "NEW",
       "PREPARING",
       "DELIVERING",
-      "DELIVERED",
       "COMPLETED",
       "CANCELLED",
     ];

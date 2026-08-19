@@ -42,7 +42,6 @@ export async function renderRevenueReport(
 
   const pendingCount = filteredOrders.filter((o) => o.orderStatus === "NEW" || o.orderStatus === "PREPARING").length;
   const deliveringCount = filteredOrders.filter((o) => o.orderStatus === "DELIVERING").length;
-  const deliveredCount = filteredOrders.filter((o) => o.orderStatus === "DELIVERED").length;
   const completedCount = filteredOrders.filter((o) => o.orderStatus === "COMPLETED").length;
   const cancelledCount = filteredOrders.filter((o) => o.orderStatus === "CANCELLED").length;
 
@@ -76,7 +75,6 @@ export async function renderRevenueReport(
 📈 <b>Phân bổ trạng thái:</b>
   ● 🟡 Đang xử lý: <b>${pendingCount}</b> đơn
   ● 🔵 Đang giao: <b>${deliveringCount}</b> đơn
-  ● 🟢 Đã giao tới khách: <b>${deliveredCount}</b> đơn
   ● 🟢 Đã hoàn thành: <b>${completedCount}</b> đơn
   ● ❌ Đã hủy: <b>${cancelledCount}</b> đơn${topItemsText}
 ━━━━━━━━━━━━━━━━━━━━━

@@ -78,12 +78,8 @@ export const keyboards = {
       ]);
     } else if (currentStatus === "DELIVERING") {
       actionRows.push([
-        { text: "✅ GIAO HÀNG THÀNH CÔNG", callback_data: `order:status:${orderId}:DELIVERED` },
+        { text: "✅ GIAO HÀNG THÀNH CÔNG", callback_data: `order:status:${orderId}:COMPLETED` },
         { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${orderId}` },
-      ]);
-    } else if (currentStatus === "DELIVERED") {
-      actionRows.push([
-        { text: "💰 XÁC NHẬN HOÀN TẤT", callback_data: `order:status:${orderId}:COMPLETED` },
       ]);
     }
 

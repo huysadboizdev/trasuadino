@@ -61,8 +61,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     NEW: { label: "MỚI NHẬN", variant: "danger", step: 1 },
     PREPARING: { label: "ĐANG PHA CHẾ", variant: "warning", step: 2 },
     DELIVERING: { label: "ĐANG GIAO", variant: "info", step: 3 },
-    DELIVERED: { label: "GIAO THÀNH CÔNG", variant: "info", step: 4 },
-    COMPLETED: { label: "HOÀN TẤT", variant: "success", step: 5 },
+    COMPLETED: { label: "HOÀN TẤT", variant: "success", step: 4 },
     CANCELLED: { label: "ĐÃ HỦY", variant: "neutral", step: 0 },
   };
 
@@ -79,24 +78,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           ? "border-rose-300 ring-2 ring-rose-500/20 bg-rose-50/10"
           : order.orderStatus === "PREPARING"
           ? "border-amber-300 bg-amber-50/10"
-          : order.orderStatus === "DELIVERED"
-          ? "border-teal-300 bg-teal-50/10"
           : "border-neutral-200"
       }`}
     >
       <div className="min-w-0">
         {/* Progress Bar hiển thị tiến độ đơn */}
         {order.orderStatus !== "CANCELLED" && (
-          <div className="grid grid-cols-5 gap-1 mb-3">
-            {[1, 2, 3, 4, 5].map((s) => (
+          <div className="grid grid-cols-4 gap-1 mb-3">
+            {[1, 2, 3, 4].map((s) => (
               <div
                 key={s}
                 className={`h-1.5 rounded-full transition-all ${
                   s <= statusConfig.step
                     ? order.orderStatus === "COMPLETED"
                       ? "bg-emerald-600"
-                      : order.orderStatus === "DELIVERED"
-                      ? "bg-teal-600"
                       : order.orderStatus === "DELIVERING"
                       ? "bg-sky-600"
                       : order.orderStatus === "PREPARING"
@@ -292,28 +287,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 HỦY ĐƠN
               </Button>
               <Button
-                variant="primary"
+                variant="success"
                 size="sm"
-                onClick={() => handleUpdate("DELIVERED")}
+                onClick={() => handleUpdate("COMPLETED")}
                 disabled={isUpdating}
-                className="col-span-2 text-[11px] sm:text-xs font-black bg-teal-600 hover:bg-teal-700 text-white shadow-sm tracking-wider uppercase px-1 truncate"
+                className="col-span-2 text-[11px] sm:text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm tracking-wider uppercase px-1 truncate"
               >
-                ✅ GIAO THÀNH CÔNG
+                ✅ GIAO HÀNG THÀNH CÔNG
               </Button>
             </div>
-          )}
-
-          {order.orderStatus === "DELIVERED" && (
-            <Button
-              variant="success"
-              size="md"
-              fullWidth
-              onClick={() => handleUpdate("COMPLETED")}
-              disabled={isUpdating}
-              className="text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm tracking-wider uppercase"
-            >
-              💰 XÁC NHẬN HOÀN TẤT & DOANH THU
-            </Button>
           )}
 
           {order.orderStatus === "COMPLETED" && (
