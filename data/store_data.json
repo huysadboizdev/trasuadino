@@ -3703,7 +3703,7 @@
       "categoryName": "Trà Sữa Mix Kem",
       "isAvailable": true,
       "isFeatured": true,
-      "salesCount": 221,
+      "salesCount": 222,
       "options": [
         {
           "id": "optg-size-2io98l",
@@ -7218,6 +7218,33 @@
     }
   ],
   "orders": [
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "note": "",
+      "paymentMethod": "COD",
+      "paymentStatus": "PENDING",
+      "orderStatus": "NEW",
+      "subtotalAmount": 39000,
+      "discountAmount": 0,
+      "totalAmount": 39000,
+      "items": [
+        {
+          "productId": "nhung-mk-23",
+          "productName": "Olong Nhài Cốm",
+          "quantity": 1,
+          "unitPrice": 39000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh)",
+          "totalPrice": 39000
+        }
+      ],
+      "id": "ord-1787136380530",
+      "orderCode": "DINO-608",
+      "trackingToken": "trk_1787136380530_x9pvfrcn",
+      "isGuest": true,
+      "createdAt": "2026-08-19T10:46:20.530Z"
+    },
     {
       "customerName": "Hà Quang Huy",
       "customerPhone": "0987789987",

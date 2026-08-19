@@ -18,6 +18,15 @@ export async function POST(req: NextRequest) {
 
     const payload = await req.json();
 
+    console.log("[TELEGRAM WEBHOOK] RECEIVED");
+
+    if (payload.callback_query) {
+      const cb = payload.callback_query;
+      console.log(
+        `[TELEGRAM CALLBACK] RECEIVED callbackQueryId=${cb.id} callbackData="${cb.data}" telegramUserId=${cb.from?.id} telegramChatId=${cb.message?.chat?.id}`
+      );
+    }
+
     // Safe logging (không log token hay secret)
     const updateType = payload.message
       ? "message"

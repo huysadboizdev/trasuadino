@@ -56,13 +56,14 @@ export const orderService = {
     }
 
     console.log(
-      `[OrderService.updateStatus] Looking up order identifier="${raw}", targetStatus="${newStatus}", actor=${actor?.source || "UNKNOWN"}(${actor?.id || ""})`
+      `[ORDER LOOKUP] Looking up orderId="${raw}", targetStatus="${newStatus}", actor=${actor?.source || "UNKNOWN"}(${actor?.id || ""})`
     );
 
     // 1. Tìm đơn hàng
     const existingOrder = dataStore.getOrderById(raw);
+    console.log(`[ORDER LOOKUP RESULT] found=${!!existingOrder}, orderId="${raw}"`);
+
     if (!existingOrder) {
-      console.warn(`[OrderService.updateStatus] Order lookup result: found=false, identifier="${raw}"`);
       return {
         success: false,
         reason: "NOT_FOUND",
