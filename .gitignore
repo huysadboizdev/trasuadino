@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Runtime data
+/data/store_data.json
+/data/telegram_audit.log
+/data/*.log
+
