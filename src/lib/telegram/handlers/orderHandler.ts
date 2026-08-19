@@ -132,8 +132,6 @@ export async function renderOrderDetail(
       ? "⏳ CHƯA THANH TOÁN"
       : "❌ ĐÃ HỦY";
 
-  const customerTypeBadge = !order.userId || order.isGuest ? "🟢 Khách vãng lai" : "🔵 Thành viên";
-
   let itemsText = "";
   order.items.forEach((it, idx) => {
     const itemTotal = new Intl.NumberFormat("vi-VN").format(it.totalPrice);
@@ -151,8 +149,7 @@ export async function renderOrderDetail(
 
   const text = `📦 <b>CHI TIẾT ĐƠN HÀNG #${order.orderCode}</b>
 ━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Khách hàng:</b> ${order.customerName}
-🏷️ <b>Phân loại:</b> ${customerTypeBadge}
+👤 <b>Khách:</b> ${order.customerName || "Khách"}
 📞 <b>Số điện thoại:</b> <code>${order.customerPhone}</code>
 📍 <b>Địa chỉ:</b> ${order.deliveryAddress}
 ${order.note ? `📝 <b>Ghi chú:</b> <i>${order.note}</i>\n` : ""}
@@ -180,13 +177,16 @@ export async function handleOrderStatusUpdate(
   newStatus: OrderStatus,
   telegramUserId: string | number
 ) {
+  console.log(`[Telegram Order Status Update] orderId=${orderId}, targetStatus=${newStatus}, adminId=${telegramUserId}`);
+
   // 1. Tìm đơn hàng qua ID / orderCode / trackingToken
   const existingOrder = dataStore.getOrderById(orderId);
   if (!existingOrder) {
+    console.warn(`[Telegram Order Status Update] Order not found: orderId=${orderId}`);
     return await editTelegramMessageText(
       chatId,
       messageId,
-      `❌ <b>Đơn hàng #${orderId} không còn tồn tại hoặc đã bị xóa.</b>\n<i>Vui lòng quay lại danh sách để kiểm tra các đơn mới nhất.</i>`,
+      `❌ <b>Đơn hàng #${orderId} không còn tồn tại.</b>\n<i>Vui lòng quay lại danh sách để kiểm tra các đơn mới nhất.</i>`,
       { reply_markup: keyboards.backToDashboard() }
     );
   }
@@ -199,6 +199,7 @@ export async function handleOrderStatusUpdate(
   // 3. Cập nhật trạng thái trong database
   const updatedOrder = dataStore.updateOrderStatus(existingOrder.id, newStatus);
   if (!updatedOrder) {
+    console.error(`[Telegram Order Status Update] Failed to update status in database: orderId=${existingOrder.id}`);
     return await editTelegramMessageText(
       chatId,
       messageId,

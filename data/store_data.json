@@ -3703,7 +3703,7 @@
       "categoryName": "Trà Sữa Mix Kem",
       "isAvailable": true,
       "isFeatured": true,
-      "salesCount": 220,
+      "salesCount": 221,
       "options": [
         {
           "id": "optg-size-2io98l",
@@ -7222,6 +7222,33 @@
       "customerName": "Hà Quang Huy",
       "customerPhone": "0987789987",
       "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "note": "",
+      "paymentMethod": "COD",
+      "paymentStatus": "PENDING",
+      "orderStatus": "NEW",
+      "subtotalAmount": 39000,
+      "discountAmount": 0,
+      "totalAmount": 39000,
+      "items": [
+        {
+          "productId": "nhung-mk-23",
+          "productName": "Olong Nhài Cốm",
+          "quantity": 1,
+          "unitPrice": 39000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh)",
+          "totalPrice": 39000
+        }
+      ],
+      "id": "ord-1787133129544",
+      "orderCode": "DINO-210",
+      "trackingToken": "trk_1787133129544_7nvz8y77",
+      "isGuest": true,
+      "createdAt": "2026-08-19T09:52:09.544Z"
+    },
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
       "deliveryLat": 21.022107630414652,
       "deliveryLng": 105.80130598469987,
       "note": "",
@@ -7393,15 +7420,16 @@
     {
       "id": "sess-1787122765850-105",
       "userId": "usr-1787122765838",
-      "tokenHash": "9d09423a5989a64329c0f231a9c32d3357add23786da6219bbba4dda5a914ced",
+      "tokenHash": "9081dc8326ca3c54241498319d99255ab0df0eb834999734b211855ff572a560",
       "familyId": "fam-1f7d9517cf100d063af9740f17f59b18",
       "role": "CUSTOMER",
       "ipAddress": "::1",
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0",
-      "expiresAt": "2026-08-26T09:37:12.760Z",
-      "lastUsedAt": "2026-08-19T09:37:12.762Z",
+      "expiresAt": "2026-08-26T09:51:51.204Z",
+      "lastUsedAt": "2026-08-19T09:51:51.205Z",
       "createdAt": "2026-08-19T06:59:25.851Z",
-      "updatedAt": "2026-08-19T09:37:12.762Z"
+      "updatedAt": "2026-08-19T09:51:52.784Z",
+      "revokedAt": "2026-08-19T09:51:52.784Z"
     },
     {
       "id": "sess-1787122751009-157",
@@ -7818,6 +7846,11 @@
       "tokenHash": "5c27aff2aa433a48f013e8f5d6f08132ca266cb9b5790d22ffee9cc37a33791a",
       "familyId": "fam-1f7d9517cf100d063af9740f17f59b18",
       "rotatedAt": "2026-08-19T09:37:12.762Z"
+    },
+    {
+      "tokenHash": "9d09423a5989a64329c0f231a9c32d3357add23786da6219bbba4dda5a914ced",
+      "familyId": "fam-1f7d9517cf100d063af9740f17f59b18",
+      "rotatedAt": "2026-08-19T09:51:51.205Z"
     }
   ],
   "users": [
