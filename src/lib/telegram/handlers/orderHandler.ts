@@ -1,6 +1,7 @@
 import { orderService } from "../../orderService";
 import { dataStore } from "../../store";
-import { keyboards } from "../keyboards";
+import { keyboards, buildOrderKeyboard } from "../keyboards";
+import { buildOrderMessage } from "../notifications";
 import { editTelegramMessageText, sendTelegramMessage, answerTelegramCallbackQuery } from "../botApi";
 import { logTelegramAudit } from "../security";
 import { OrderStatus } from "../../types";
@@ -117,59 +118,8 @@ export async function renderOrderDetail(
     return await sendTelegramMessage(chatId, errorText, { reply_markup: keyboards.backToDashboard() });
   }
 
-  const amountStr = new Intl.NumberFormat("vi-VN").format(order.totalAmount);
-  const createdDate = new Date(order.createdAt).toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-
-  const paymentMethodLabel =
-    order.paymentMethod === "SEPAY_QR"
-      ? "Chuyển khoản SePay VietQR"
-      : order.paymentMethod === "COD"
-      ? "Tiền mặt khi nhận (COD)"
-      : "MoMo";
-
-  const paymentStatusBadge =
-    order.paymentStatus === "PAID"
-      ? "✅ ĐÃ THANH TOÁN"
-      : order.paymentStatus === "PENDING"
-      ? "⏳ CHƯA THANH TOÁN"
-      : "❌ ĐÃ HỦY";
-
-  let itemsText = "";
-  order.items.forEach((it, idx) => {
-    const itemTotal = new Intl.NumberFormat("vi-VN").format(it.totalPrice);
-    itemsText += `${idx + 1}. <b>${it.productName}</b> × <b>${it.quantity}</b> (${itemTotal}₫)\n`;
-    if (it.optionsNote) {
-      itemsText += `   <i>↳ ${it.optionsNote}</i>\n`;
-    }
-  });
-
-  let voucherInfo = "";
-  if (order.couponCode) {
-    const discountStr = new Intl.NumberFormat("vi-VN").format(order.discountAmount || 0);
-    voucherInfo = `🎟 <b>Mã giảm giá:</b> <code>${order.couponCode}</code> (-${discountStr}₫)\n`;
-  }
-
-  const text = `📦 <b>CHI TIẾT ĐƠN HÀNG #${order.orderCode}</b>
-━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Khách:</b> ${order.customerName || "Khách"}
-📞 <b>Số điện thoại:</b> <code>${order.customerPhone}</code>
-📍 <b>Địa chỉ:</b> ${order.deliveryAddress}
-${order.note ? `📝 <b>Ghi chú:</b> <i>${order.note}</i>\n` : ""}
-📋 <b>DANH SÁCH MÓN:</b>
-${itemsText}━━━━━━━━━━━━━━━━━━━━━
-${voucherInfo}💰 <b>TỔNG TIỀN:</b> <code>${amountStr} ₫</code>
-💳 <b>Phương thức:</b> ${paymentMethodLabel}
-📊 <b>Thanh toán:</b> ${paymentStatusBadge}
-🕐 <b>Thời gian đặt:</b> ${createdDate}
-📌 <b>Trạng thái đơn:</b> ${getStatusBadge(order.orderStatus)}`;
-
-  const markup = keyboards.orderDetail(order.id, order.orderStatus, order.customerPhone);
+  const text = buildOrderMessage(order);
+  const markup = buildOrderKeyboard(order);
 
   if (messageId) {
     const res = await editTelegramMessageText(chatId, messageId, text, { reply_markup: markup });
@@ -207,7 +157,7 @@ export async function handleOrderStatusUpdate(
     return await editTelegramMessageText(
       chatId,
       messageId,
-      `❌ <b>${result.message}</b>\n<i>Vui lòng quay lại danh sách để kiểm tra.</i>`,
+      `❌ <b>${result.message}</b>\n<i>Vui lòng kiểm tra lại trạng thái đơn.</i>`,
       { reply_markup: keyboards.backToDashboard() }
     );
   }
@@ -238,8 +188,10 @@ export async function handleOrderStatusUpdate(
     result: "SUCCESS",
   });
 
-  // Re-render chi tiết đơn đã cập nhật
-  return await renderOrderDetail(chatId, messageId, targetOrder.id);
+  // Edit chính message cũ (sửa nội dung và cập nhật inline keyboard tương ứng)
+  const text = buildOrderMessage(targetOrder);
+  const markup = buildOrderKeyboard(targetOrder);
+  return await editTelegramMessageText(chatId, messageId, text, { reply_markup: markup });
 }
 
 export async function handleConfirmCancelOrder(
@@ -252,11 +204,14 @@ export async function handleConfirmCancelOrder(
 
   const text = `⚠️ <b>XÁC NHẬN HỦY ĐƠN HÀNG #${order.orderCode}</b>\n\nBạn có chắc chắn muốn hủy đơn hàng của <b>${order.customerName || "Khách"}</b> không?\n<i>Hành động này sẽ hoàn lại số lượt sử dụng voucher (nếu có).</i>`;
 
-  const markup = keyboards.confirmAction(
-    `order:exec_cancel:${order.id}`,
-    `order:detail:${order.id}`,
-    "❌ Xác nhận HỦY ĐƠN"
-  );
+  const markup = {
+    inline_keyboard: [
+      [
+        { text: "❌ Xác nhận HỦY ĐƠN", callback_data: `order:exec_cancel:${order.id}` },
+        { text: "⬅️ Quay lại", callback_data: `order:detail:${order.id}` },
+      ],
+    ],
+  };
 
   return await editTelegramMessageText(chatId, messageId, text, { reply_markup: markup });
 }
@@ -292,5 +247,8 @@ export async function handleExecuteCancelOrder(
     result: "SUCCESS",
   });
 
-  return await renderOrderDetail(chatId, messageId, result.order!.id);
+  const cancelledOrder = result.order!;
+  const text = buildOrderMessage(cancelledOrder);
+  const markup = buildOrderKeyboard(cancelledOrder);
+  return await editTelegramMessageText(chatId, messageId, text, { reply_markup: markup });
 }

@@ -1,10 +1,8 @@
 import { getTelegramAdminIds, sendTelegramMessage } from "./botApi";
 import { Order } from "../types";
+import { buildOrderKeyboard } from "./keyboards";
 
-export async function notifyTelegramNewOrder(order: Order) {
-  const adminIds = getTelegramAdminIds();
-  if (adminIds.length === 0) return;
-
+export function buildOrderMessage(order: Order): string {
   const amountStr = new Intl.NumberFormat("vi-VN").format(order.totalAmount);
   const paymentMethodLabel =
     order.paymentMethod === "SEPAY_QR"
@@ -12,9 +10,6 @@ export async function notifyTelegramNewOrder(order: Order) {
       : order.paymentMethod === "COD"
       ? "Tiền mặt (COD)"
       : "MoMo";
-
-  const paymentStatusBadge =
-    order.paymentStatus === "PAID" ? "✅ ĐÃ THANH TOÁN" : "⏳ CHƯA THANH TOÁN (COD)";
 
   let itemsList = "";
   order.items.forEach((it, idx) => {
@@ -31,7 +26,18 @@ export async function notifyTelegramNewOrder(order: Order) {
     voucherInfo = `🎟 <b>Voucher:</b> <code>${order.couponCode}</code> (-${discountStr}₫)\n`;
   }
 
-  const text = `🦖 <b>ĐƠN HÀNG MỚI #${order.orderCode}</b>
+  let statusLine = "🟡 <b>Trạng thái:</b> MỚI NHẬN";
+  if (order.orderStatus === "PREPARING") {
+    statusLine = "🟠 <b>Trạng thái:</b> ĐANG PHA CHẾ";
+  } else if (order.orderStatus === "DELIVERING") {
+    statusLine = "🔵 <b>Trạng thái:</b> ĐANG GIAO";
+  } else if (order.orderStatus === "COMPLETED") {
+    statusLine = "🟢 <b>Trạng thái:</b> HOÀN TẤT";
+  } else if (order.orderStatus === "CANCELLED") {
+    statusLine = "🔴 <b>Trạng thái:</b> ĐÃ HỦY";
+  }
+
+  return `🦖 <b>ĐƠN HÀNG #${order.orderCode}</b>
 ━━━━━━━━━━━━━━━━━━━━━
 👤 <b>Khách:</b> ${order.customerName || "Khách"}
 📞 <b>SĐT:</b> <code>${order.customerPhone}</code>
@@ -41,20 +47,15 @@ ${order.note ? `📝 <b>Ghi chú:</b> <i>${order.note}</i>\n` : ""}
 ${itemsList}━━━━━━━━━━━━━━━━━━━━━
 ${voucherInfo}💰 <b>Tổng:</b> <code>${amountStr} ₫</code>
 💵 <b>Thanh toán:</b> ${paymentMethodLabel}
-🟡 <b>Trạng thái:</b> MỚI NHẬN`;
+${statusLine}`;
+}
 
-  const markup = {
-    inline_keyboard: [
-      [
-        { text: "👨‍🍳 NHẬN ĐƠN & PHA CHẾ", callback_data: `order:status:${order.id}:PREPARING` },
-        { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${order.id}:DELIVERING` },
-      ],
-      [
-        { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${order.id}` },
-        { text: "🔍 Xem chi tiết", callback_data: `order:detail:${order.id}` },
-      ],
-    ],
-  };
+export async function notifyTelegramNewOrder(order: Order) {
+  const adminIds = getTelegramAdminIds();
+  if (adminIds.length === 0) return;
+
+  const text = buildOrderMessage(order);
+  const markup = buildOrderKeyboard(order);
 
   for (const chatId of adminIds) {
     await sendTelegramMessage(chatId, text, { reply_markup: markup });

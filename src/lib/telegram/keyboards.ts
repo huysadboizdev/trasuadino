@@ -1,6 +1,37 @@
 import { InlineKeyboardMarkup, InlineKeyboardButton } from "./types";
 import { OrderStatus } from "../types";
 
+export function buildOrderKeyboard(order: { id: string; orderStatus: OrderStatus }): InlineKeyboardMarkup {
+  const rows: InlineKeyboardButton[][] = [];
+
+  if (order.orderStatus === "NEW") {
+    rows.push([
+      { text: "👨‍🍳 NHẬN ĐƠN & PHA CHẾ", callback_data: `order:status:${order.id}:PREPARING` },
+      { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${order.id}:DELIVERING` },
+    ]);
+    rows.push([
+      { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${order.id}` },
+    ]);
+  } else if (order.orderStatus === "PREPARING") {
+    rows.push([
+      { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${order.id}:DELIVERING` },
+    ]);
+    rows.push([
+      { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${order.id}` },
+    ]);
+  } else if (order.orderStatus === "DELIVERING") {
+    rows.push([
+      { text: "✅ GIAO HÀNG THÀNH CÔNG", callback_data: `order:status:${order.id}:COMPLETED` },
+    ]);
+    rows.push([
+      { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${order.id}` },
+    ]);
+  }
+  // COMPLETED hoặc CANCELLED: không còn action button
+
+  return { inline_keyboard: rows };
+}
+
 export const keyboards = {
   // 1. Main Dashboard
   mainDashboard: (): InlineKeyboardMarkup => ({
@@ -62,26 +93,7 @@ export const keyboards = {
 
   // 3. Order Detail
   orderDetail: (orderId: string, currentStatus: OrderStatus, phone?: string): InlineKeyboardMarkup => {
-    const actionRows: InlineKeyboardButton[][] = [];
-
-    // Các nút chuyển trạng thái phù hợp theo workflow chuẩn
-    if (currentStatus === "NEW") {
-      actionRows.push([
-        { text: "👨‍🍳 NHẬN ĐƠN & PHA CHẾ", callback_data: `order:status:${orderId}:PREPARING` },
-        { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${orderId}:DELIVERING` },
-      ]);
-      actionRows.push([{ text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${orderId}` }]);
-    } else if (currentStatus === "PREPARING") {
-      actionRows.push([
-        { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${orderId}:DELIVERING` },
-        { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${orderId}` },
-      ]);
-    } else if (currentStatus === "DELIVERING") {
-      actionRows.push([
-        { text: "✅ GIAO HÀNG THÀNH CÔNG", callback_data: `order:status:${orderId}:COMPLETED` },
-        { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${orderId}` },
-      ]);
-    }
+    const actionRows = buildOrderKeyboard({ id: orderId, orderStatus: currentStatus }).inline_keyboard;
 
     const utilRow: InlineKeyboardButton[] = [];
     if (phone) {
