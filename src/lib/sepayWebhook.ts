@@ -9,13 +9,22 @@ import { paymentConfig } from "@/lib/paymentConfig";
  */
 export async function handleSepayWebhook(req: NextRequest) {
   try {
-    // 1. Kiểm tra xác thực Webhook Secret (nếu được cấu hình trong env)
-    const webhookSecret = paymentConfig.sepay.webhookSecret;
-    if (webhookSecret) {
-      const authHeader = req.headers.get("Authorization") || req.headers.get("authorization") || "";
-      const expectedToken = webhookSecret.startsWith("Apikey ") ? webhookSecret : `Apikey ${webhookSecret}`;
-      if (authHeader !== webhookSecret && authHeader !== expectedToken) {
-        console.warn("[SEPAY WEBHOOK] Unauthorized request received");
+    // 1. Kiểm tra xác thực Webhook Secret / API Key (nếu được cấu hình trong env)
+    const secret = (paymentConfig.sepay.webhookSecret || paymentConfig.sepay.apiKey || "").trim();
+    if (secret) {
+      const rawHeader = (
+        req.headers.get("Authorization") ||
+        req.headers.get("authorization") ||
+        req.headers.get("x-sepay-api-key") ||
+        ""
+      ).trim();
+
+      // SePay thường gửi: "Apikey <TOKEN>" hoặc "Bearer <TOKEN>" hoặc token thô
+      const cleanHeaderToken = rawHeader.replace(/^(Apikey|Bearer)\s+/i, "").trim();
+      const cleanSecretToken = secret.replace(/^(Apikey|Bearer)\s+/i, "").trim();
+
+      if (cleanHeaderToken !== cleanSecretToken && rawHeader !== secret) {
+        console.warn("[SEPAY WEBHOOK] Unauthorized request received. Header:", rawHeader);
         return NextResponse.json(
           { success: false, message: "Unauthorized webhook request" },
           { status: 401 }

@@ -8,7 +8,8 @@ export const paymentConfig = {
     bankName: "MB Bank (Ngân hàng Quân Đội)",
     bankAccount: process.env.SEPAY_BANK_ACCOUNT || process.env.NEXT_PUBLIC_SEPAY_BANK_ACCOUNT || "0858798206",
     bankHolder: process.env.SEPAY_BANK_HOLDER || process.env.NEXT_PUBLIC_SEPAY_BANK_HOLDER || "NGUYEN THI NHUNG",
-    webhookSecret: process.env.SEPAY_WEBHOOK_SECRET || "",
+    apiKey: process.env.SEPAY_API_KEY || process.env.SEPAY_WEBHOOK_SECRET || "",
+    webhookSecret: process.env.SEPAY_WEBHOOK_SECRET || process.env.SEPAY_API_KEY || "",
     template: "compact", // compact, qr_only, print
   },
 };
