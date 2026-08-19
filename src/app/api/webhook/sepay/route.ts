@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
+import { notifyTelegramPaymentSuccess } from "@/lib/telegram/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,6 +38,12 @@ export async function POST(req: NextRequest) {
 
     if (order) {
       console.log(`==> [SEPAY] Đã xác nhận thanh toán tự động cho đơn: ${order.orderCode} (${amount}đ)`);
+
+      // Bắn thông báo Telegram xác nhận thanh toán thành công
+      notifyTelegramPaymentSuccess(order, amount).catch((err) => {
+        console.error("[Telegram SePay Notification Error]:", err);
+      });
+
       return NextResponse.json({
         success: true,
         orderCode: order.orderCode,

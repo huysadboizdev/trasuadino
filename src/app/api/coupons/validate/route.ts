@@ -4,7 +4,7 @@ import { dataStore } from "@/lib/store";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, orderAmount } = body;
+    const { code, orderAmount, items, user, userId, customerEmail, customerPhone } = body;
 
     if (!code || typeof code !== "string" || !code.trim()) {
       return NextResponse.json(
@@ -21,11 +21,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = dataStore.validateCoupon(code.trim(), numAmount);
+    const userInfo = user || {
+      id: userId,
+      email: customerEmail,
+      phone: customerPhone,
+    };
+
+    const result = dataStore.validateCoupon(code.trim(), numAmount, items, userInfo);
 
     if (!result.valid) {
       return NextResponse.json(
-        { valid: false, message: result.message },
+        {
+          valid: false,
+          reason: result.reason,
+          message: result.message,
+        },
         { status: 400 }
       );
     }
@@ -36,11 +46,16 @@ export async function POST(req: NextRequest) {
       coupon: {
         id: result.coupon?.id,
         code: result.coupon?.code,
+        discountType: result.coupon?.discountType,
+        discountValue: result.coupon?.discountValue,
         discountPercent: result.coupon?.discountPercent,
+        maxDiscountAmount: result.coupon?.maxDiscountAmount,
+        minOrderAmount: result.coupon?.minOrderAmount,
         description: result.coupon?.description,
       },
       discountAmount: result.discountAmount,
       finalAmount: result.finalAmount,
+      qualifyingAmount: result.qualifyingAmount,
     });
   } catch (error: any) {
     console.error("Lỗi khi kiểm tra mã giảm giá:", error);

@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const settings = dataStore.getSettings();
-    return NextResponse.json({
-      success: true,
-      settings,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        settings,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (error) {
     return NextResponse.json(
       { success: false, message: "Lỗi khi lấy cài đặt" },

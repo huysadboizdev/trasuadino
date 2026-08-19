@@ -4,10 +4,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Order, OrderStatus } from "@/lib/types";
 import { OrderCard } from "@/components/admin/OrderCard";
 import { ReceiptModal } from "@/components/admin/ReceiptModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { AdminFilterSelect, FilterOption } from "@/components/admin/AdminFilterSelect";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { useRealtime } from "@/hooks/useRealtime";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -17,12 +19,17 @@ export default function AdminOrdersPage() {
   const [isCreatingTestOrder, setIsCreatingTestOrder] = useState<boolean>(false);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<Order | null>(null);
 
-  const { showToast } = useToast();
+  // Custom Delete Order Modal State
+  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const { showToast, playDingSound } = useToast();
 
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/orders");
+      const res = await fetch("/api/orders", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
@@ -34,9 +41,35 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // Realtime Event Stream cho Admin (< 50ms)
+  useRealtime({
+    role: "admin",
+    onOrderCreated: (newOrder) => {
+      setOrders((prev) => {
+        if (prev.some((o) => o.id === newOrder.id || o.orderCode === newOrder.orderCode)) {
+          return prev;
+        }
+        return [newOrder, ...prev];
+      });
+      playDingSound?.();
+      showToast(
+        `🛎️ ĐƠN HÀNG MỚI #${newOrder.orderCode} - ${newOrder.customerName} (${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(newOrder.totalAmount)}) [${newOrder.paymentMethod === "COD" ? "Tiền mặt COD" : "VietQR"}]`,
+        "warning"
+      );
+    },
+    onOrderStatusUpdated: (updatedOrder) => {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+      );
+    },
+    onReconnect: () => {
+      fetchOrders();
+    },
+  });
+
   useEffect(() => {
     fetchOrders();
-    const timer = setInterval(fetchOrders, 8000); // Polling mỗi 8s
+    const timer = setInterval(fetchOrders, 15000); // Polling dự phòng mỗi 15s
     return () => clearInterval(timer);
   }, []);
 
@@ -102,6 +135,38 @@ export default function AdminOrdersPage() {
       showToast("Lỗi khi tạo đơn thử", "error");
     } finally {
       setIsCreatingTestOrder(false);
+    }
+  };
+
+  // Xóa đơn hàng thật sự khỏi database
+  const handleDeleteOrder = async () => {
+    if (!deletingOrder) return;
+
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+
+      const res = await fetch(`/api/orders/${deletingOrder.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Cập nhật danh sách đơn hàng tức thì trên UI
+        setOrders((prev) => prev.filter((o) => o.id !== deletingOrder.id));
+        showToast(`Đã xóa đơn hàng #${deletingOrder.orderCode} thành công!`, "success");
+        setDeletingOrder(null);
+      } else {
+        setDeleteError(data.message || "Không thể xóa đơn hàng. Vui lòng thử lại.");
+        showToast(data.message || "Lỗi khi xóa đơn hàng", "error");
+      }
+    } catch (err) {
+      console.error("Lỗi xóa đơn hàng:", err);
+      setDeleteError("Lỗi kết nối máy chủ. Vui lòng thử lại sau.");
+      showToast("Không thể xóa đơn hàng. Vui lòng thử lại.", "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -343,13 +408,17 @@ export default function AdminOrdersPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
           {filteredOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
               onStatusChange={handleStatusChange}
               onViewReceipt={(ord) => setSelectedReceiptOrder(ord)}
+              onDelete={(ord) => {
+                setDeletingOrder(ord);
+                setDeleteError(null);
+              }}
             />
           ))}
         </div>
@@ -360,6 +429,28 @@ export default function AdminOrdersPage() {
         isOpen={Boolean(selectedReceiptOrder)}
         onClose={() => setSelectedReceiptOrder(null)}
         order={selectedReceiptOrder}
+      />
+
+      {/* Modal Xác Nhận Xóa Đơn Hàng */}
+      <ConfirmModal
+        isOpen={Boolean(deletingOrder)}
+        onClose={() => {
+          if (!isDeleting) {
+            setDeletingOrder(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={handleDeleteOrder}
+        title="Xóa đơn hàng?"
+        message="Bạn có chắc chắn muốn xóa đơn hàng này khỏi cơ sở dữ liệu không?"
+        highlightText={deletingOrder ? `#${deletingOrder.orderCode}` : undefined}
+        highlightLabel="Mã đơn hàng"
+        warningText="Không thể hoàn tác sau khi xóa. Đơn hàng sẽ bị xóa hoàn toàn khỏi hệ thống để tránh dữ liệu rác."
+        confirmLabel={isDeleting ? "Đang xóa..." : "Xóa đơn hàng"}
+        cancelLabel="Hủy"
+        variant="danger"
+        isLoading={isDeleting}
+        errorMessage={deleteError}
       />
     </div>
   );

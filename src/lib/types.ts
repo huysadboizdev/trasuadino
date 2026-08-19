@@ -93,20 +93,62 @@ export interface Product {
   createdAt?: string;
 }
 
+export type DiscountType = "PERCENT" | "FIXED_AMOUNT";
+export type CustomerScope = "ALL" | "NEW_CUSTOMERS" | "RETURNING_CUSTOMERS" | "MIN_ORDERS" | "MIN_SPENT";
+export type ProductScope = "ALL" | "CATEGORIES" | "PRODUCTS";
+
+export interface VoucherUsage {
+  id: string;
+  couponId: string;
+  couponCode: string;
+  userId?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  orderId: string;
+  orderCode: string;
+  discountAmount: number;
+  usedAt: string;
+}
+
 export interface Coupon {
   id: string;
-  code: string; // VD: DINO20, TET2026 (viết hoa, không khoảng trắng)
+  code: string; // VD: DINO20, TET2026, GIAM100K (viết hoa, không khoảng trắng)
   description?: string;
-  discountPercent: number; // % giảm: 1 - 100
+  
+  // 1. Loại giảm giá
+  discountType: DiscountType; // "PERCENT" | "FIXED_AMOUNT"
+  discountValue: number; // Nếu PERCENT: 1 - 100 (%), nếu FIXED_AMOUNT: số tiền VNĐ (VD: 100000)
+  maxDiscountAmount?: number; // Mức giảm tối đa (VND) khi dùng PERCENT
+  
+  // 2. Điều kiện giá trị đơn hàng
   minOrderAmount?: number; // Đơn tối thiểu áp dụng (VND), mặc định 0
-  maxDiscountAmount?: number; // Mức giảm tối đa (VND), optional
+  
+  // 3. Điều kiện lịch sử mua hàng của khách (Đơn hoàn thành & Tổng chi tiêu)
+  minCompletedOrders?: number; // Số đơn hàng đã hoàn thành tối thiểu (ví dụ: >= 10 đơn)
+  minTotalSpent?: number; // Tổng tiền đã mua tích lũy tối thiểu (ví dụ: >= 5.000.000đ)
+  customerScope?: CustomerScope; // "ALL" | "NEW_CUSTOMERS" | "RETURNING_CUSTOMERS" | "MIN_ORDERS" | "MIN_SPENT"
+  
+  // 4. Giới hạn lượt sử dụng
+  usageLimit?: number; // Tổng số lượt dùng tối đa trên toàn hệ thống (undefined = không giới hạn)
+  usageCount: number; // Tổng số lượt đã dùng
+  usagePerUser?: number; // Số lần tối đa mỗi khách hàng được dùng (mặc định 1 hoặc tuỳ chỉnh)
+  
+  // 5. Hiệu lực theo ngày & giờ
   startDate?: string; // Ngày giờ bắt đầu (YYYY-MM-DDTHH:mm hoặc ISO)
   endDate?: string; // Ngày giờ kết thúc (YYYY-MM-DDTHH:mm hoặc ISO)
+  
+  // 6. Phạm vi áp dụng (Product / Category Scope)
+  applyScope?: ProductScope; // "ALL" | "CATEGORIES" | "PRODUCTS"
+  applicableCategoryIds?: string[]; // Danh sách categoryId được áp dụng
+  applicableProductIds?: string[]; // Danh sách productId được áp dụng
+  
+  // 7. Trạng thái & Timestamps
   isActive: boolean; // Bật / Tắt tức thì
-  usageLimit?: number; // Giới hạn lượt dùng tối đa, optional
-  usageCount: number; // Số lượt đã dùng
   createdAt: string;
   updatedAt?: string;
+
+  // Backward compatibility:
+  discountPercent?: number; // Hỗ trợ tương thích ngược dữ liệu cũ
 }
 
 export type OrderStatus = "NEW" | "PREPARING" | "DELIVERING" | "COMPLETED" | "CANCELLED";
@@ -160,6 +202,10 @@ export interface StoreSetting {
   sepayBankName: string;
   sepayAccountName: string;
   sepayQrPattern: string;
+  telegramBotToken?: string;
+  telegramAdminChatIds?: string;
+  telegramNotifyNewOrder?: boolean;
+  telegramNotifyPayment?: boolean;
 }
 
 export interface DashboardStats {

@@ -5,7 +5,9 @@ import { User, UserRole } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Badge, BadgeVariant } from "@/components/ui/Badge";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast";
+import { PhoneActionButton } from "@/components/admin/PhoneActionButton";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -21,12 +23,17 @@ export default function AdminUsersPage() {
   const [address, setAddress] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Custom Delete Confirm Modal State
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
+
   const { showToast } = useToast();
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/users");
+      const res = await fetch("/api/users", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
@@ -60,23 +67,36 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleDeleteUser = async (user: User) => {
+  const handleDeleteUserClick = (user: User) => {
     if (user.role === "ADMIN" && users.filter((u) => u.role === "ADMIN").length <= 1) {
       showToast("Không thể xóa tài khoản Quản trị viên duy nhất của quán", "warning");
       return;
     }
+    setDeletingUser(user);
+    setDeleteUserError(null);
+  };
 
-    if (!window.confirm(`Xóa tài khoản của "${user.name}"?`)) return;
+  const handleConfirmDeleteUser = async () => {
+    if (!deletingUser) return;
 
     try {
-      const res = await fetch(`/api/users/${user.id}`, { method: "DELETE" });
+      setIsDeletingUser(true);
+      setDeleteUserError(null);
+      const res = await fetch(`/api/users/${deletingUser.id}`, { method: "DELETE" });
       if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.id !== user.id));
-        showToast(`Đã xóa tài khoản "${user.name}"`, "info");
+        setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+        showToast(`Đã xóa tài khoản "${deletingUser.name}"`, "success");
+        setDeletingUser(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setDeleteUserError(data.message || "Không thể xóa tài khoản. Vui lòng thử lại.");
+        showToast(data.message || "Lỗi khi xóa người dùng", "error");
       }
     } catch (err) {
-      console.error(err);
+      setDeleteUserError("Lỗi kết nối máy chủ. Vui lòng thử lại.");
       showToast("Lỗi khi xóa người dùng", "error");
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -164,7 +184,7 @@ export default function AdminUsersPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
           {users.map((user) => {
             const roleInfo = roleBadgeMap[user.role] || {
               label: user.role,
@@ -203,8 +223,9 @@ export default function AdminUsersPage() {
                       </p>
                     )}
                     {user.phone && (
-                      <p className="text-neutral-600 font-bold truncate">
-                        📞 <a href={`tel:${user.phone}`} className="text-emerald-700 underline">{user.phone}</a>
+                      <p className="text-neutral-600 font-bold truncate flex items-center gap-1">
+                        <span>📞</span>
+                        <PhoneActionButton phone={user.phone} variant="link" />
                       </p>
                     )}
                     {user.address && (
@@ -235,7 +256,7 @@ export default function AdminUsersPage() {
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => handleDeleteUser(user)}
+                    onClick={() => handleDeleteUserClick(user)}
                     className="text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 flex-shrink-0"
                   >
                     XÓA
@@ -283,7 +304,7 @@ export default function AdminUsersPage() {
         <form id="add-user-form" onSubmit={handleCreateUser} className="space-y-3.5">
           <div>
             <label className="block text-xs font-black uppercase text-neutral-700 tracking-wider mb-1">
-              HỌ VÀ TÊN <span className="text-rose-600">*</span>
+              Tên Facebook <span className="text-rose-600">*</span>
             </label>
             <input
               type="text"
@@ -371,6 +392,28 @@ export default function AdminUsersPage() {
           </div>
         </form>
       </BottomSheet>
+
+      {/* Custom Delete User Confirm Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deletingUser)}
+        onClose={() => {
+          if (!isDeletingUser) {
+            setDeletingUser(null);
+            setDeleteUserError(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteUser}
+        title="Xóa tài khoản người dùng?"
+        message="Bạn có chắc chắn muốn xóa tài khoản này khỏi hệ thống?"
+        highlightText={deletingUser ? `${deletingUser.name} (${deletingUser.phone || deletingUser.email || deletingUser.role})` : undefined}
+        highlightLabel="TÀI KHOẢN ĐƯỢC CHỌN"
+        warningText="Tài khoản này sẽ không thể đăng nhập vào hệ thống sau khi xóa."
+        confirmLabel="XÓA TÀI KHOẢN"
+        cancelLabel="HỦY"
+        variant="danger"
+        isLoading={isDeletingUser}
+        errorMessage={deleteUserError}
+      />
     </div>
   );
 }

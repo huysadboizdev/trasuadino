@@ -5,6 +5,7 @@ import { Product, Category, ProductOptionGroup, ProductOption } from "@/lib/type
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { useToast } from "../ui/Toast";
 
 interface ProductFormModalProps {
@@ -203,8 +204,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   // Xóa nhóm tùy chọn
   const handleRemoveOptionGroup = (groupIndex: number) => {
-    if (!window.confirm("Bạn có chắc muốn xóa toàn bộ nhóm tùy chọn này?")) return;
+    const groupName = optionGroups[groupIndex]?.title || "tùy chọn";
     setOptionGroups((prev) => prev.filter((_, idx) => idx !== groupIndex));
+    showToast(`Đã xóa nhóm ${groupName}`, "info");
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -385,13 +387,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <label className="block text-xs font-black uppercase text-neutral-700 tracking-wider mb-1">
                   GIÁ BÁN (VNĐ) <span className="text-rose-600">*</span>
                 </label>
-                <input
-                  type="number"
+                <CurrencyInput
                   value={price}
-                  onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                  placeholder="VD: 35000"
-                  className="w-full px-3.5 py-2.5 sm:py-3 rounded-xl border border-neutral-300 text-neutral-900 font-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm min-h-[44px]"
+                  onChange={(val) => setPrice(val)}
+                  placeholder="VD: 35.000"
+                  suffix="₫"
                   required
+                  size="md"
                 />
               </div>
 

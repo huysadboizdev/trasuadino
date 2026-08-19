@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
 import { OrderStatus } from "@/lib/types";
+import { realtimeHub } from "@/lib/realtime";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function PUT(
   req: NextRequest,
@@ -32,6 +36,9 @@ export async function PUT(
         { status: 404 }
       );
     }
+
+    // Bắn sự kiện realtime 2 chiều: Admin <-> User cập nhật tức thì
+    realtimeHub.emitOrderStatusUpdated(updated);
 
     return NextResponse.json({
       success: true,

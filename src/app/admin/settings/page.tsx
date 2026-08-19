@@ -5,8 +5,10 @@ import { StoreSetting } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
 import { Badge } from "@/components/ui/Badge";
+import { useToast } from "@/components/ui/Toast";
 
 export default function AdminSettingsPage() {
+  const { showToast } = useToast();
   const [settings, setSettings] = useState<StoreSetting | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -18,10 +20,14 @@ export default function AdminSettingsPage() {
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
   const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
 
+  // Test Telegram Bot state
+  const [isTestingTelegram, setIsTestingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<string | null>(null);
+
   const fetchSettings = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/settings");
+      const res = await fetch("/api/settings", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setSettings(data.settings);
@@ -52,11 +58,12 @@ export default function AdminSettingsPage() {
 
       if (res.ok) {
         setSaveSuccess(true);
+        showToast("Đã lưu cài đặt quán và SePay thành công!", "success");
         setTimeout(() => setSaveSuccess(false), 3000);
       }
     } catch (err) {
       console.error(err);
-      alert("Lỗi khi lưu cài đặt");
+      showToast("Lỗi khi lưu cài đặt", "error");
     } finally {
       setIsSaving(false);
     }
@@ -93,6 +100,38 @@ export default function AdminSettingsPage() {
       setWebhookTestResult("❌ Lỗi khi gửi webhook thử nghiệm");
     } finally {
       setIsTestingWebhook(false);
+    }
+  };
+
+  // Thử nghiệm gửi tin nhắn Telegram Bot
+  const handleTestTelegram = async () => {
+    try {
+      setIsTestingTelegram(true);
+      setTelegramTestResult(null);
+
+      const res = await fetch("/api/telegram/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: settings?.telegramBotToken,
+          chatId: settings?.telegramAdminChatIds,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setTelegramTestResult(`✅ ${data.message}`);
+        showToast("Đã gửi tin nhắn thử nghiệm tới Telegram!", "success");
+      } else {
+        setTelegramTestResult(`❌ ${data.message}`);
+        showToast(data.message || "Lỗi kết nối Telegram", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      setTelegramTestResult("❌ Lỗi khi gửi tin nhắn thử nghiệm Telegram");
+      showToast("Lỗi máy chủ khi gửi tin nhắn", "error");
+    } finally {
+      setIsTestingTelegram(false);
     }
   };
 
@@ -334,7 +373,7 @@ export default function AdminSettingsPage() {
                 className="text-xs font-bold whitespace-nowrap"
                 onClick={() => {
                   navigator.clipboard.writeText("https://your-domain.com/api/webhook/sepay");
-                  alert("Đã sao chép đường dẫn Webhook!");
+                  showToast("Đã sao chép đường dẫn Webhook vào bộ nhớ tạm!", "success");
                 }}
               >
                 SAO CHÉP
@@ -346,12 +385,113 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
-        {/* Phần 3: Công cụ kiểm thử SePay Webhook giả lập */}
+        {/* Phần 3: Cấu hình Telegram Admin Center Bot */}
+        <div className="bg-white rounded-3xl p-4 sm:p-6 border border-neutral-200 shadow-sm space-y-4">
+          <div className="border-b border-neutral-200 pb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-black text-neutral-900 uppercase tracking-tight">
+                3. CẤU HÌNH TELEGRAM ADMIN CENTER (QUẢN TRỊ QUA BOT)
+              </h2>
+              <Badge variant="brand" size="sm">
+                MINI APP
+              </Badge>
+            </div>
+            <p className="text-xs text-neutral-500 mt-1">
+              Nhận thông báo đơn mới tức thì và điều khiển, duyệt đơn, xem doanh thu ngay trên Telegram
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-black uppercase text-neutral-700 tracking-wider mb-1.5">
+                TELEGRAM BOT TOKEN (LẤY TỪ @BotFather)
+              </label>
+              <input
+                type="password"
+                value={settings.telegramBotToken || ""}
+                onChange={(e) => setSettings({ ...settings, telegramBotToken: e.target.value })}
+                placeholder="VD: 7123456789:AAHq..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-neutral-900 font-mono text-xs sm:text-sm focus:border-brand-600 focus:ring-1 focus:ring-brand-600 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-black uppercase text-neutral-700 tracking-wider mb-1.5">
+                TELEGRAM ADMIN CHAT ID (PHÂN CÁCH BẰNG DẤU PHẨY NẾU NHIỀU ID)
+              </label>
+              <input
+                type="text"
+                value={settings.telegramAdminChatIds || ""}
+                onChange={(e) => setSettings({ ...settings, telegramAdminChatIds: e.target.value })}
+                placeholder="VD: 123456789, 987654321"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-neutral-900 font-bold text-xs sm:text-sm focus:border-brand-600 focus:ring-1 focus:ring-brand-600 outline-none"
+              />
+              <p className="text-[11px] text-neutral-500 mt-1">
+                Lấy Chat ID cá nhân của bạn bằng cách chat với bot <code>@userinfobot</code> hoặc <code>@myidbot</code> trên Telegram.
+              </p>
+            </div>
+
+            {/* Đường dẫn Webhook Telegram */}
+            <div className="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-200 space-y-2">
+              <label className="block text-xs font-black uppercase text-neutral-700 tracking-wider">
+                ĐƯỜNG DẪN TELEGRAM WEBHOOK URL
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={
+                    typeof window !== "undefined"
+                      ? `${window.location.origin}/api/webhook/telegram`
+                      : "https://yourdomain.com/api/webhook/telegram"
+                  }
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-neutral-300 text-xs font-mono text-neutral-600 select-all"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap font-bold text-xs"
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      navigator.clipboard.writeText(`${window.location.origin}/api/webhook/telegram`);
+                      showToast("Đã sao chép Webhook URL vào bộ nhớ tạm!", "success");
+                    }
+                  }}
+                >
+                  SAO CHÉP
+                </Button>
+              </div>
+            </div>
+
+            {/* Nút gửi tin nhắn test */}
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={handleTestTelegram}
+                isLoading={isTestingTelegram}
+                className="w-full text-xs font-black uppercase tracking-wider border-brand-300 text-brand-900 hover:bg-brand-50"
+              >
+                📲 GỬI TIN NHẮN THỬ NGHIỆM TỚI TELEGRAM BOT
+              </Button>
+
+              {telegramTestResult && (
+                <div className="mt-3 p-3 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold text-brand-950">
+                  {telegramTestResult}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Phần 4: Công cụ kiểm thử SePay Webhook giả lập */}
         <div className="bg-brand-50/50 rounded-3xl p-4 sm:p-6 border border-brand-200 shadow-sm space-y-4">
           <div className="border-b border-brand-200/80 pb-3">
             <div className="flex items-center gap-2">
               <h2 className="text-sm sm:text-base font-black text-brand-950 uppercase tracking-tight">
-                3. CÔNG CỤ TEST THỬ THANH TOÁN SEPAY (KHÔNG MẤT TIỀN THẬT)
+                4. CÔNG CỤ TEST THỬ THANH TOÁN SEPAY (KHÔNG MẤT TIỀN THẬT)
               </h2>
               <Badge variant="purple" size="sm">
                 SIMULATOR

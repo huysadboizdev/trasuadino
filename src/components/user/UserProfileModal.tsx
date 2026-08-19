@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { AddressLocationPicker } from "../ui/AddressLocationPicker";
@@ -11,11 +9,15 @@ import { SavedAddress } from "@/lib/types";
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
+  focusField?: "name" | "phone" | "address";
+  onSavedSuccess?: () => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   isOpen,
   onClose,
+  focusField,
+  onSavedSuccess,
 }) => {
   const { user, updateProfile } = useAuth();
   const { showToast } = useToast();
@@ -26,6 +28,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [lat, setLat] = useState<number | undefined>(undefined);
   const [lng, setLng] = useState<number | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
+
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
 
   // Danh sách địa chỉ đã lưu
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(user?.savedAddresses || []);
@@ -42,17 +47,40 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   }, [user]);
 
+  // Tự động focus vào trường còn thiếu
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        if (focusField === "name") {
+          nameInputRef.current?.focus();
+        } else if (focusField === "phone") {
+          phoneInputRef.current?.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, focusField]);
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      showToast("Vui lòng nhập họ tên của bạn", "warning");
+
+    const cleanName = name.trim();
+    const cleanPhone = phone.trim().replace(/\s/g, "");
+    const cleanAddress = address.trim();
+
+    if (!cleanName || cleanName.length < 2) {
+      showToast("Vui lòng nhập tên Facebook để shop biết bạn là ai", "warning");
+      nameInputRef.current?.focus();
       return;
     }
-    if (!phone.trim()) {
-      showToast("Vui lòng nhập số điện thoại liên hệ", "warning");
+
+    if (!cleanPhone || !/^[0-9+]{9,12}$/.test(cleanPhone)) {
+      showToast("Số điện thoại không hợp lệ (từ 9 - 12 chữ số)", "warning");
+      phoneInputRef.current?.focus();
       return;
     }
-    if (!address.trim()) {
+
+    if (!cleanAddress || cleanAddress.length < 5) {
       showToast("Vui lòng nhập địa chỉ giao hàng cụ thể", "warning");
       return;
     }
@@ -65,15 +93,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         body: JSON.stringify({
           userId: user?.id,
           email: user?.email,
-          name: name.trim(),
-          phone: phone.trim(),
-          address: address.trim(),
+          name: cleanName,
+          phone: cleanPhone,
+          address: cleanAddress,
         }),
       });
 
       if (res.ok) {
-        updateProfile({ name: name.trim(), phone: phone.trim(), address: address.trim() });
-        showToast("Đã cập nhật thông tin cá nhân thành công!", "success");
+        updateProfile({ name: cleanName, phone: cleanPhone, address: cleanAddress });
+        showToast("Đã cập nhật thông tin thành công!", "success");
+        onSavedSuccess?.();
         onClose();
       } else {
         showToast("Lỗi khi lưu thông tin", "error");
@@ -174,12 +203,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     >
       <div className="space-y-4">
         <form id="user-profile-form" onSubmit={handleSaveProfile} className="space-y-3.5">
-          {/* Họ và tên */}
+          {/* Tên Facebook */}
           <div>
             <label className="block text-xs font-black uppercase text-neutral-700 tracking-wider mb-1.5">
-              HỌ VÀ TÊN <span className="text-rose-600">*</span>
+              Tên Facebook <span className="text-rose-600">*</span>
             </label>
             <input
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -195,6 +225,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               SỐ ĐIỆN THOẠI GIAO HÀNG <span className="text-rose-600">*</span>
             </label>
             <input
+              ref={phoneInputRef}
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}

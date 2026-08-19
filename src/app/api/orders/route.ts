@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
+import { notifyTelegramNewOrder } from "@/lib/telegram/notifications";
+import { realtimeHub } from "@/lib/realtime";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
@@ -8,11 +13,18 @@ export async function GET(req: NextRequest) {
 
     const orders = dataStore.getOrders(status);
 
-    return NextResponse.json({
-      success: true,
-      orders,
-      total: orders.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        orders,
+        total: orders.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     return NextResponse.json(
       { success: false, message: "Lỗi khi lấy danh sách đơn hàng" },
@@ -42,18 +54,68 @@ export async function POST(req: NextRequest) {
       totalAmount,
     } = body;
 
-    if (!customerName || !customerPhone || !items || items.length === 0) {
+    const cleanName = customerName ? String(customerName).trim() : "";
+    const cleanPhone = customerPhone ? String(customerPhone).trim().replace(/\s/g, "") : "";
+    const cleanAddress = deliveryAddress ? String(deliveryAddress).trim() : "";
+
+    const isNameValid = cleanName.length >= 2;
+    const isPhoneValid = /^[0-9+]{9,12}$/.test(cleanPhone);
+    const isAddressValid = cleanAddress.length >= 5;
+
+    if (!isNameValid || !isPhoneValid || !isAddressValid || !items || items.length === 0) {
+      const missing = [];
+      if (!isNameValid) missing.push("Tên Facebook người nhận");
+      if (!isPhoneValid) missing.push("Số điện thoại");
+      if (!isAddressValid) missing.push("Địa chỉ giao hàng");
+      if (!items || items.length === 0) missing.push("Món trong giỏ");
+
       return NextResponse.json(
-        { success: false, message: "Thiếu thông tin khách hàng hoặc món đã chọn" },
+        {
+          success: false,
+          message: `Bạn chưa cập nhật đầy đủ thông tin giao hàng: ${missing.join(", ")}`,
+          missingFields: {
+            name: !isNameValid,
+            phone: !isPhoneValid,
+            address: !isAddressValid,
+          },
+        },
         { status: 400 }
       );
     }
 
+    const calculatedSubtotal = items.reduce((sum: number, it: any) => sum + (Number(it.totalPrice) || 0), 0);
+    let verifiedDiscount = Number(discountAmount) || 0;
+    let verifiedFinalTotal = Number(totalAmount) || calculatedSubtotal;
+
+    // Backend validation chặt chẽ cho mã giảm giá trước khi chốt đơn
+    if (couponCode && typeof couponCode === "string" && couponCode.trim()) {
+      const valResult = dataStore.validateCoupon(
+        couponCode.trim(),
+        calculatedSubtotal,
+        items,
+        { id: userId, email: customerEmail, phone: customerPhone }
+      );
+
+      if (!valResult.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Mã giảm giá không hợp lệ: ${valResult.message}`,
+            reason: valResult.reason,
+          },
+          { status: 400 }
+        );
+      }
+
+      verifiedDiscount = valResult.discountAmount || 0;
+      verifiedFinalTotal = valResult.finalAmount ?? Math.max(0, calculatedSubtotal - verifiedDiscount);
+    }
+
     const newOrder = dataStore.createOrder({
-      customerName,
-      customerPhone,
-      customerEmail,
-      userId,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      customerEmail: customerEmail ? customerEmail.trim().toLowerCase() : undefined,
+      userId: userId || undefined,
       deliveryAddress: deliveryAddress || "",
       deliveryLat: deliveryLat ? Number(deliveryLat) : undefined,
       deliveryLng: deliveryLng ? Number(deliveryLng) : undefined,
@@ -61,12 +123,20 @@ export async function POST(req: NextRequest) {
       paymentMethod: paymentMethod || "COD",
       paymentStatus: "PENDING",
       orderStatus: "NEW",
-      subtotalAmount: subtotalAmount !== undefined ? Number(subtotalAmount) : undefined,
-      couponCode: couponCode || undefined,
+      subtotalAmount: calculatedSubtotal,
+      couponCode: couponCode ? couponCode.trim().toUpperCase() : undefined,
       discountPercent: discountPercent !== undefined ? Number(discountPercent) : undefined,
-      discountAmount: discountAmount !== undefined ? Number(discountAmount) : undefined,
-      totalAmount: Number(totalAmount) || 0,
+      discountAmount: verifiedDiscount,
+      totalAmount: verifiedFinalTotal,
       items: items || [],
+    });
+
+    // Bắn sự kiện Realtime lập tức tới Admin & Khách hàng (< 50ms)
+    realtimeHub.emitOrderCreated(newOrder);
+
+    // Bắn thông báo Telegram thời gian thực cho Admin
+    notifyTelegramNewOrder(newOrder).catch((err) => {
+      console.error("[Telegram Notification Error]:", err);
     });
 
     return NextResponse.json({
@@ -74,9 +144,10 @@ export async function POST(req: NextRequest) {
       order: newOrder,
       message: "Tạo đơn hàng thành công",
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Lỗi khi tạo đơn hàng:", error);
     return NextResponse.json(
-      { success: false, message: "Lỗi máy chủ khi tạo đơn" },
+      { success: false, message: error?.message || "Lỗi máy chủ khi tạo đơn" },
       { status: 500 }
     );
   }

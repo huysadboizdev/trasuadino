@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Product, Category } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { useToast } from "@/components/ui/Toast";
 
 interface BulkPriceAdjustmentModalProps {
@@ -28,6 +29,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
+  const [direction, setDirection] = useState<"INCREASE" | "DECREASE">("INCREASE");
   const [adjustmentType, setAdjustmentType] = useState<"FIXED" | "PERCENT">("FIXED");
   const [amount, setAmount] = useState<string>("2000");
   const [roundTo, setRoundTo] = useState<number>(1000);
@@ -71,16 +73,17 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
     return products.filter((p) => selectedProductIds.includes(p.id));
   }, [scope, products, selectedProductIds]);
 
-  const numAmount = Number(amount) || 0;
+  const numAmount = Math.abs(Number(amount)) || 0;
+  const effectiveAmount = direction === "DECREASE" ? -numAmount : numAmount;
 
   const previewList = useMemo(() => {
     return targetProducts.map((p) => {
       const oldPrice = p.price;
       let newPrice = oldPrice;
       if (adjustmentType === "FIXED") {
-        newPrice = oldPrice + numAmount;
+        newPrice = oldPrice + effectiveAmount;
       } else if (adjustmentType === "PERCENT") {
-        newPrice = oldPrice * (1 + numAmount / 100);
+        newPrice = oldPrice * (1 + effectiveAmount / 100);
       }
 
       if (roundTo > 0) {
@@ -98,7 +101,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
         diff,
       };
     });
-  }, [targetProducts, adjustmentType, numAmount, roundTo]);
+  }, [targetProducts, adjustmentType, effectiveAmount, roundTo]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("vi-VN").format(val) + "đ";
@@ -106,12 +109,12 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
 
   const handleSubmit = async () => {
     if (numAmount === 0) {
-      showToast("Vui lòng nhập số tiền hoặc % tăng giá khác 0", "error");
+      showToast("Vui lòng nhập số tiền hoặc % điều chỉnh khác 0", "error");
       return;
     }
 
     if (scope === "SELECTED" && selectedProductIds.length === 0) {
-      showToast("Vui lòng chọn ít nhất 1 món để tăng giá", "warning");
+      showToast("Vui lòng chọn ít nhất 1 món để điều chỉnh giá", "warning");
       return;
     }
 
@@ -124,6 +127,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
           scope,
           productIds: scope === "SELECTED" ? selectedProductIds : undefined,
           adjustmentType,
+          direction,
           amount: numAmount,
           roundTo,
         }),
@@ -159,10 +163,10 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black text-brand-950 uppercase tracking-tight">
-                ĐIỀU CHỈNH TĂNG GIÁ SẢN PHẨM
+                ĐIỀU CHỈNH GIÁ SẢN PHẨM
               </h2>
               <p className="text-xs text-neutral-500 font-medium">
-                Tăng giá nhanh theo từng món được chọn hoặc toàn bộ thực đơn
+                Tăng hoặc giảm giá nhanh theo từng món được chọn hoặc toàn bộ thực đơn
               </p>
             </div>
           </div>
@@ -217,24 +221,50 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                     Toàn bộ thực đơn ({products.length} món)
                   </p>
                   <p className="text-[11px] text-neutral-500 font-medium mt-0.5">
-                    Tăng giá đồng loạt cho tất cả các món đang có trong quán
+                    Điều chỉnh giá đồng loạt cho tất cả các món đang có trong quán
                   </p>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* 2. Cấu hình mức tăng giá & hình thức */}
+          {/* 2. Cấu hình mức tăng/giảm giá & hình thức */}
           <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-200 space-y-4">
             <label className="block text-xs font-black uppercase text-neutral-700 tracking-wider">
-              2. MỨC GIÁ & HÌNH THỨC ĐIỀU CHỈNH
+              2. HƯỚNG ĐIỀU CHỈNH & MỨC GIÁ
             </label>
+
+            {/* Chiều điều chỉnh: TĂNG GIÁ (+) hoặc GIẢM GIÁ (-) */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setDirection("INCREASE")}
+                className={`py-2.5 px-3 rounded-xl border-2 text-xs font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                  direction === "INCREASE"
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-900 shadow-2xs"
+                    : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                <span>📈</span> TĂNG GIÁ (+)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirection("DECREASE")}
+                className={`py-2.5 px-3 rounded-xl border-2 text-xs font-black uppercase transition-all flex items-center justify-center gap-1.5 ${
+                  direction === "DECREASE"
+                    ? "border-rose-600 bg-rose-50 text-rose-900 shadow-2xs"
+                    : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                <span>📉</span> GIẢM GIÁ (-)
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Hình thức */}
               <div>
                 <label className="block text-[11px] font-bold text-neutral-600 mb-1.5">
-                  Hình thức tăng giá:
+                  Hình thức tính:
                 </label>
                 <div className="flex bg-neutral-200/80 p-1 rounded-xl">
                   <button
@@ -246,7 +276,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                         : "text-neutral-600 hover:text-neutral-900"
                     }`}
                   >
-                    + Số tiền cố định (VNĐ)
+                    Số tiền cố định (VNĐ)
                   </button>
                   <button
                     type="button"
@@ -257,28 +287,42 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                         : "text-neutral-600 hover:text-neutral-900"
                     }`}
                   >
-                    + Phần trăm (%)
+                    Phần trăm (%)
                   </button>
                 </div>
               </div>
 
-              {/* Mức tăng */}
+              {/* Mức tăng/giảm */}
               <div>
                 <label className="block text-[11px] font-bold text-neutral-600 mb-1.5">
-                  {adjustmentType === "FIXED" ? "Số tiền cộng thêm (VNĐ):" : "Phần trăm tăng thêm (%):"}
+                  {direction === "INCREASE"
+                    ? (adjustmentType === "FIXED" ? "Số tiền tăng thêm (VNĐ):" : "Phần trăm tăng thêm (%):")
+                    : (adjustmentType === "FIXED" ? "Số tiền giảm bớt (VNĐ):" : "Phần trăm giảm bớt (%):")}
                 </label>
-                <div className="relative">
-                  <input
-                    type="number"
+                {adjustmentType === "FIXED" ? (
+                  <CurrencyInput
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder={adjustmentType === "FIXED" ? "VD: 2000 hoặc 5000" : "VD: 10"}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 font-black text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                    onChange={(val) => setAmount(val === "" ? "" : String(val))}
+                    placeholder="VD: 2.000 hoặc 5.000"
+                    suffix="₫"
+                    size="md"
                   />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-neutral-400">
-                    {adjustmentType === "FIXED" ? "VNĐ" : "%"}
-                  </span>
-                </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="VD: 10"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 font-black text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white pr-10"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-neutral-400">
+                      %
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -412,10 +456,17 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                 <span>👁️</span> BẢNG XEM TRƯỚC GIÁ MỚI ({previewList.length} món)
               </label>
               {previewList.length > 0 && numAmount !== 0 && (
-                <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                <span
+                  className={`text-xs font-black px-2 py-0.5 rounded-md border ${
+                    direction === "INCREASE"
+                      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                      : "text-rose-700 bg-rose-50 border-rose-200"
+                  }`}
+                >
+                  {direction === "INCREASE" ? "Tăng " : "Giảm "}
                   {adjustmentType === "FIXED"
-                    ? `Tăng +${formatCurrency(numAmount)}/món`
-                    : `Tăng +${numAmount}%/món`}
+                    ? `${formatCurrency(numAmount)}/món`
+                    : `${numAmount}%/món`}
                 </span>
               )}
             </div>
@@ -434,7 +485,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                       <th className="p-2.5">Tên món</th>
                       <th className="p-2.5 text-right">Giá hiện tại</th>
                       <th className="p-2.5 text-right">Chênh lệch</th>
-                      <th className="p-2.5 text-right text-brand-950 font-black">Giá sau khi tăng</th>
+                      <th className="p-2.5 text-right text-brand-950 font-black">Giá sau điều chỉnh</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 bg-white font-medium">
@@ -446,8 +497,20 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                         <td className="p-2.5 text-right text-neutral-500">
                           {formatCurrency(item.oldPrice)}
                         </td>
-                        <td className="p-2.5 text-right font-black text-emerald-600">
-                          +{formatCurrency(item.diff)}
+                        <td
+                          className={`p-2.5 text-right font-black ${
+                            item.diff > 0
+                              ? "text-emerald-600"
+                              : item.diff < 0
+                              ? "text-rose-600"
+                              : "text-neutral-500"
+                          }`}
+                        >
+                          {item.diff > 0
+                            ? `+${formatCurrency(item.diff)}`
+                            : item.diff < 0
+                            ? `-${formatCurrency(Math.abs(item.diff))}`
+                            : "0đ"}
                         </td>
                         <td className="p-2.5 text-right font-black text-brand-950">
                           {formatCurrency(item.newPrice)}
@@ -473,8 +536,11 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                   Xác nhận điều chỉnh giá?
                 </h3>
                 <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                  Bạn đang chuẩn bị tăng giá cho <b>{previewList.length} sản phẩm</b> với mức tăng{" "}
-                  <b>{adjustmentType === "FIXED" ? `+${formatCurrency(numAmount)}` : `+${numAmount}%`}</b>.
+                  Bạn đang chuẩn bị {direction === "INCREASE" ? "tăng giá" : "giảm giá"} cho <b>{previewList.length} sản phẩm</b> với mức{" "}
+                  <b>
+                    {direction === "INCREASE" ? "+" : "-"}
+                    {adjustmentType === "FIXED" ? formatCurrency(numAmount) : `${numAmount}%`}
+                  </b>.
                   Giá mới sẽ được áp dụng ngay lập tức cho toàn bộ khách hàng trên web.
                 </p>
               </div>
@@ -495,7 +561,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
                   isLoading={isSubmitting}
                   className="bg-brand-900 hover:bg-brand-950 text-white font-black"
                 >
-                  ĐỒNG Ý TĂNG GIÁ
+                  {direction === "INCREASE" ? "ĐỒNG Ý TĂNG GIÁ" : "ĐỒNG Ý GIẢM GIÁ"}
                 </Button>
               </div>
             </div>
@@ -512,7 +578,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
             variant="primary"
             onClick={() => {
               if (previewList.length === 0) {
-                showToast("Vui lòng chọn ít nhất 1 món để tăng giá", "warning");
+                showToast("Vui lòng chọn ít nhất 1 món để điều chỉnh giá", "warning");
                 return;
               }
               setShowConfirm(true);
@@ -520,7 +586,7 @@ export const BulkPriceAdjustmentModal: React.FC<BulkPriceAdjustmentModalProps> =
             disabled={previewList.length === 0 || numAmount === 0 || isSubmitting}
             className="bg-brand-900 hover:bg-brand-950 text-white font-black px-6 shadow-md"
           >
-            ⚡ ÁP DỤNG TĂNG GIÁ ({previewList.length} MÓN)
+            ⚡ ÁP DỤNG {direction === "INCREASE" ? "TĂNG" : "GIẢM"} GIÁ ({previewList.length} MÓN)
           </Button>
         </div>
       </div>

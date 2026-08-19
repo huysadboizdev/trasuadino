@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const users = dataStore.getUsers();
-    return NextResponse.json({
-      success: true,
-      users,
-      total: users.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        users,
+        total: users.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     return NextResponse.json(
       { success: false, message: "Lỗi khi lấy danh sách người dùng" },

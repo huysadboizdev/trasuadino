@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const coupons = dataStore.getCoupons();
-    return NextResponse.json({ success: true, coupons });
+    return NextResponse.json(
+      { success: true, coupons },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Lỗi khi lấy danh sách mã giảm giá:", error);
     return NextResponse.json(
@@ -17,7 +27,26 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, description, discountPercent, minOrderAmount, maxDiscountAmount, startDate, endDate, isActive, usageLimit } = body;
+    const {
+      code,
+      description,
+      discountType = "PERCENT",
+      discountValue,
+      discountPercent,
+      minOrderAmount,
+      maxDiscountAmount,
+      minCompletedOrders,
+      minTotalSpent,
+      customerScope,
+      usageLimit,
+      usagePerUser,
+      startDate,
+      endDate,
+      applyScope,
+      applicableCategoryIds,
+      applicableProductIds,
+      isActive,
+    } = body;
 
     if (!code || !code.trim()) {
       return NextResponse.json(
@@ -26,10 +55,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const pct = Number(discountPercent);
-    if (isNaN(pct) || pct <= 0 || pct > 100) {
+    const cleanType = discountType === "FIXED_AMOUNT" ? "FIXED_AMOUNT" : "PERCENT";
+    const value = Number(discountValue ?? discountPercent);
+
+    if (isNaN(value) || value <= 0) {
       return NextResponse.json(
-        { success: false, message: "Phần trăm giảm giá phải từ 1% đến 100%." },
+        { success: false, message: "Giá trị giảm giá phải lớn hơn 0." },
+        { status: 400 }
+      );
+    }
+
+    if (cleanType === "PERCENT" && value > 100) {
+      return NextResponse.json(
+        { success: false, message: "Phần trăm giảm giá không được vượt quá 100%." },
+        { status: 400 }
+      );
+    }
+
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      return NextResponse.json(
+        { success: false, message: "Thời gian bắt đầu không được lớn hơn thời gian kết thúc." },
         { status: 400 }
       );
     }
@@ -37,13 +82,22 @@ export async function POST(req: NextRequest) {
     const newCoupon = dataStore.createCoupon({
       code,
       description,
-      discountPercent: pct,
+      discountType: cleanType,
+      discountValue: value,
+      discountPercent: cleanType === "PERCENT" ? value : undefined,
       minOrderAmount: minOrderAmount ? Number(minOrderAmount) : 0,
       maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
+      minCompletedOrders: minCompletedOrders ? Number(minCompletedOrders) : undefined,
+      minTotalSpent: minTotalSpent ? Number(minTotalSpent) : undefined,
+      customerScope: customerScope || "ALL",
+      usageLimit: usageLimit ? Number(usageLimit) : undefined,
+      usagePerUser: usagePerUser ? Number(usagePerUser) : 1,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      applyScope: applyScope || "ALL",
+      applicableCategoryIds: Array.isArray(applicableCategoryIds) ? applicableCategoryIds : [],
+      applicableProductIds: Array.isArray(applicableProductIds) ? applicableProductIds : [],
       isActive: isActive !== false,
-      usageLimit: usageLimit ? Number(usageLimit) : undefined,
     });
 
     return NextResponse.json({

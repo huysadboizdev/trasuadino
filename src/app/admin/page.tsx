@@ -6,6 +6,7 @@ import { DashboardStats, Order } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { PhoneActionButton } from "@/components/admin/PhoneActionButton";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -17,8 +18,8 @@ export default function AdminDashboardPage() {
     try {
       setIsLoading(true);
       const [ordersRes, prodsRes] = await Promise.all([
-        fetch("/api/orders"),
-        fetch("/api/products"),
+        fetch("/api/orders", { cache: "no-store" }),
+        fetch("/api/products", { cache: "no-store" }),
       ]);
 
       if (ordersRes.ok && prodsRes.ok) {
@@ -206,7 +207,7 @@ export default function AdminDashboardPage() {
         <p className="text-xs font-black uppercase text-neutral-400 tracking-wider">
           LỐI TẮT QUẢN TRỊ 1-CHẠM
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5">
           <Link
             href="/admin/orders"
             className="flex flex-col items-center justify-center p-3.5 sm:p-4 bg-brand-50 hover:bg-brand-100 text-brand-950 font-black text-xs rounded-2xl border border-brand-200 uppercase tracking-tight text-center transition-all active:scale-98"
@@ -224,6 +225,15 @@ export default function AdminDashboardPage() {
               MENU
             </span>
             <span className="truncate w-full px-0.5">MÓN & TOPPING</span>
+          </Link>
+          <Link
+            href="/admin/coupons"
+            className="flex flex-col items-center justify-center p-3.5 sm:p-4 bg-neutral-50 hover:bg-neutral-100 text-neutral-900 font-black text-xs rounded-2xl border border-neutral-200 uppercase tracking-tight text-center transition-all active:scale-98"
+          >
+            <span className="text-sm sm:text-base font-black mb-0.5 sm:mb-1 text-neutral-700">
+              VOUCHER
+            </span>
+            <span className="truncate w-full px-0.5">MÃ GIẢM GIÁ</span>
           </Link>
           <Link
             href="/admin/categories"
@@ -279,12 +289,7 @@ export default function AdminDashboardPage() {
                   <span className="font-extrabold text-neutral-900 text-xs sm:text-sm truncate">
                     {order.customerName}
                   </span>
-                  <a
-                    href={`tel:${order.customerPhone}`}
-                    className="text-[11px] font-bold text-emerald-700 underline"
-                  >
-                    {order.customerPhone}
-                  </a>
+                  <PhoneActionButton phone={order.customerPhone} variant="link" />
                 </div>
                 <p className="text-xs text-neutral-600 font-medium mt-1 truncate">
                   {order.items.map((i) => `${i.quantity}x ${i.productName}`).join(", ")}

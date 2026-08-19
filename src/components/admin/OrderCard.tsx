@@ -5,17 +5,20 @@ import { Order, OrderStatus } from "@/lib/types";
 import { Badge, BadgeVariant } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { useToast } from "../ui/Toast";
+import { PhoneActionButton } from "./PhoneActionButton";
 
 interface OrderCardProps {
   order: Order;
   onStatusChange: (id: string, newStatus: OrderStatus) => Promise<void>;
   onViewReceipt?: (order: Order) => void;
+  onDelete?: (order: Order) => void;
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({
   order,
   onStatusChange,
   onViewReceipt,
+  onDelete,
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const { showToast } = useToast();
@@ -117,8 +120,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             </p>
           </div>
 
-          {/* Payment Status Badge */}
-          <div className="flex-shrink-0">
+          {/* Payment Status Badge + Delete Action */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {order.paymentMethod === "SEPAY_QR" ? (
               order.paymentStatus === "PAID" ? (
                 <Badge variant="success" size="sm" className="text-[10px]">
@@ -134,21 +137,44 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 TIỀN MẶT (COD)
               </Badge>
             )}
+
+            {onDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(order);
+                }}
+                title={`Xóa đơn hàng #${order.orderCode}`}
+                className="p-1.5 rounded-xl text-neutral-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                aria-label={`Xóa đơn hàng #${order.orderCode}`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Customer Information (with Direct Call Button for Mobile) */}
+        {/* Customer Information (with Direct Call Button for Mobile / Copy for Desktop) */}
         <div className="bg-neutral-50 rounded-2xl p-3 sm:p-3.5 border border-neutral-200/80 mb-3.5 space-y-2 min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-1.5">
-            <span className="text-xs font-black text-neutral-900 uppercase truncate">
+          <div className="flex items-center justify-between gap-1.5 min-w-0">
+            <span className="text-xs font-black text-neutral-900 uppercase truncate min-w-0 flex-1">
               {order.customerName}
             </span>
-            <a
-              href={`tel:${order.customerPhone}`}
-              className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl transition-all shadow-xs active:scale-95 uppercase tracking-wider flex-shrink-0"
-            >
-              GỌI {order.customerPhone}
-            </a>
+            <PhoneActionButton phone={order.customerPhone} />
           </div>
 
           {order.deliveryAddress && (

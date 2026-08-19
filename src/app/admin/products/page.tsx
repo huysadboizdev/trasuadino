@@ -10,6 +10,7 @@ import { AdminFilterSelect, FilterOption } from "@/components/admin/AdminFilterS
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -24,14 +25,21 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false);
 
+  // Custom Confirm States
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+  const [deleteProductError, setDeleteProductError] = useState<string | null>(null);
+  const [isSeedConfirmOpen, setIsSeedConfirmOpen] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+
   const { showToast } = useToast();
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
       const [prodRes, catRes] = await Promise.all([
-        fetch("/api/products"),
-        fetch("/api/categories"),
+        fetch("/api/products", { cache: "no-store" }),
+        fetch("/api/categories", { cache: "no-store" }),
       ]);
 
       if (prodRes.ok && catRes.ok) {
@@ -144,23 +152,35 @@ function removeVietnameseTones(str: string): string {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteClick = (id: string) => {
     const target = products.find((p) => p.id === id);
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa món "${target?.name}"?`)) {
-      return;
+    if (target) {
+      setDeletingProduct(target);
+      setDeleteProductError(null);
     }
+  };
+
+  const handleConfirmDeleteProduct = async () => {
+    if (!deletingProduct) return;
 
     try {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      setIsDeletingProduct(true);
+      setDeleteProductError(null);
+      const res = await fetch(`/api/products/${deletingProduct.id}`, { method: "DELETE" });
       if (res.ok) {
-        setProducts((prev) => prev.filter((p) => p.id !== id));
-        showToast(`Đã xóa món "${target?.name}"`, "info");
+        setProducts((prev) => prev.filter((p) => p.id !== deletingProduct.id));
+        showToast(`Đã xóa món "${deletingProduct.name}"`, "success");
+        setDeletingProduct(null);
       } else {
-        showToast("Xóa món thất bại", "error");
+        const data = await res.json().catch(() => ({}));
+        setDeleteProductError(data.message || "Xóa món thất bại. Vui lòng thử lại.");
+        showToast(data.message || "Xóa món thất bại", "error");
       }
     } catch (err) {
-      console.error(err);
+      setDeleteProductError("Lỗi kết nối máy chủ. Vui lòng thử lại.");
       showToast("Lỗi khi xóa món", "error");
+    } finally {
+      setIsDeletingProduct(false);
     }
   };
 
@@ -190,25 +210,23 @@ function removeVietnameseTones(str: string): string {
     }
   };
 
-  const handleSeedMenu = async () => {
-    if (!window.confirm("Bạn có muốn nạp lại toàn bộ 44 món đồ uống + 4 món topping chuẩn của Quán Nhung?")) {
-      return;
-    }
+  const handleConfirmSeedMenu = async () => {
     try {
-      setIsLoading(true);
+      setIsSeeding(true);
       const res = await fetch("/api/menu/seed", { method: "POST" });
       const data = await res.json();
       if (data.success) {
         showToast("Đã nạp toàn bộ thực đơn Quán Nhung (48 món) thành công!", "success");
+        setIsSeedConfirmOpen(false);
         await fetchData();
       } else {
-        showToast("Lỗi khi nạp menu", "error");
+        showToast(data.message || "Lỗi khi nạp menu", "error");
       }
     } catch (err) {
       console.error(err);
       showToast("Lỗi kết nối", "error");
     } finally {
-      setIsLoading(false);
+      setIsSeeding(false);
     }
   };
 
@@ -249,7 +267,7 @@ function removeVietnameseTones(str: string): string {
           <Button
             variant="outline"
             size="md"
-            onClick={handleSeedMenu}
+            onClick={() => setIsSeedConfirmOpen(true)}
             className="flex-1 md:flex-none text-xs sm:text-sm font-black uppercase tracking-wider bg-brand-50 text-brand-950 hover:bg-brand-100 border-brand-300 shadow-2xs"
             title="Nạp lại thực đơn chuẩn Quán Nhung (53 món)"
           >
@@ -496,7 +514,7 @@ function removeVietnameseTones(str: string): string {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
           {filteredProducts.map((product) => (
             <ProductCardAdmin
               key={product.id}
@@ -505,7 +523,7 @@ function removeVietnameseTones(str: string): string {
                 setEditingProduct(prod);
                 setIsModalOpen(true);
               }}
-              onDelete={handleDelete}
+              onDelete={handleDeleteClick}
               onToggle={handleToggle}
             />
           ))}
@@ -531,6 +549,48 @@ function removeVietnameseTones(str: string): string {
         products={products}
         categories={categories}
         onSuccess={fetchData}
+      />
+
+      {/* Custom Delete Product Confirm Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deletingProduct)}
+        onClose={() => {
+          if (!isDeletingProduct) {
+            setDeletingProduct(null);
+            setDeleteProductError(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteProduct}
+        title="Xóa món ăn / đồ uống?"
+        message="Bạn có chắc chắn muốn xóa món này khỏi thực đơn của quán không?"
+        highlightText={deletingProduct?.name}
+        highlightLabel="TÊN MÓN ĂN"
+        warningText="Hành động này không thể hoàn tác."
+        confirmLabel="XÓA MÓN ĂN"
+        cancelLabel="HỦY"
+        variant="danger"
+        isLoading={isDeletingProduct}
+        errorMessage={deleteProductError}
+      />
+
+      {/* Custom Seed Menu Confirm Modal */}
+      <ConfirmModal
+        isOpen={isSeedConfirmOpen}
+        onClose={() => {
+          if (!isSeeding) {
+            setIsSeedConfirmOpen(false);
+          }
+        }}
+        onConfirm={handleConfirmSeedMenu}
+        title="Nạp lại menu chuẩn Quán Nhung?"
+        message="Hệ thống sẽ nạp lại toàn bộ 44 món đồ uống + 4 món topping chuẩn của Quán Nhung."
+        highlightText="48 MÓN ĐỒ UỐNG & TOPPING"
+        highlightLabel="DỮ LIỆU THỰC ĐƠN CHUẨN"
+        warningText="Các món hiện tại sẽ được cập nhật đồng bộ."
+        confirmLabel="ĐỒNG Ý NẠP MENU"
+        cancelLabel="HỦY"
+        variant="primary"
+        isLoading={isSeeding}
       />
     </div>
   );

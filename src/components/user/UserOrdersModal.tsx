@@ -5,8 +5,10 @@ import { Order, OrderStatus } from "@/lib/types";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Badge, BadgeVariant } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { ConfirmModal } from "../ui/ConfirmModal";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "../ui/Toast";
+import { useRealtime } from "@/hooks/useRealtime";
 
 interface UserOrdersModalProps {
   isOpen: boolean;
@@ -22,6 +24,11 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedQrOrder, setSelectedQrOrder] = useState<Order | null>(null);
+
+  // Custom Cancel Confirm Modal State
+  const [cancellingOrder, setCancellingOrder] = useState<{ id: string; code: string } | null>(null);
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+  const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
 
   const fetchUserOrders = async () => {
     if (!user?.email && !user?.phone) return;
@@ -42,29 +49,64 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
     }
   };
 
+  // Realtime lắng nghe cập nhật trạng thái đơn hàng của User
+  useRealtime({
+    role: "customer",
+    userId: user?.id,
+    phone: user?.phone,
+    onOrderStatusUpdated: (updatedOrder) => {
+      setOrders((prev) => {
+        const exists = prev.some((o) => o.id === updatedOrder.id || o.orderCode === updatedOrder.orderCode);
+        if (exists) {
+          return prev.map((o) =>
+            o.id === updatedOrder.id || o.orderCode === updatedOrder.orderCode ? updatedOrder : o
+          );
+        }
+        return [updatedOrder, ...prev];
+      });
+    },
+    onReconnect: () => {
+      fetchUserOrders();
+    },
+  });
+
   useEffect(() => {
     if (isOpen) {
       fetchUserOrders();
     }
   }, [isOpen, user]);
 
-  const handleCancelOrder = async (orderId: string, orderCode: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${orderCode}?`)) return;
+  const handleCancelOrderClick = (orderId: string, orderCode: string) => {
+    setCancellingOrder({ id: orderId, code: orderCode });
+    setCancelOrderError(null);
+  };
+
+  const handleConfirmCancelOrder = async () => {
+    if (!cancellingOrder) return;
 
     try {
-      const res = await fetch(`/api/orders/${orderId}/status`, {
+      setIsCancellingOrder(true);
+      setCancelOrderError(null);
+      const res = await fetch(`/api/orders/${cancellingOrder.id}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "CANCELLED" }),
       });
 
       if (res.ok) {
-        showToast(`Đã hủy đơn hàng #${orderCode}`, "info");
+        showToast(`Đã hủy đơn hàng #${cancellingOrder.code}`, "success");
+        setCancellingOrder(null);
         fetchUserOrders();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setCancelOrderError(data.message || "Không thể hủy đơn hàng. Vui lòng thử lại.");
+        showToast(data.message || "Lỗi khi hủy đơn hàng", "error");
       }
     } catch (err) {
-      console.error(err);
+      setCancelOrderError("Lỗi kết nối máy chủ. Vui lòng thử lại.");
       showToast("Lỗi khi hủy đơn hàng", "error");
+    } finally {
+      setIsCancellingOrder(false);
     }
   };
 
@@ -241,7 +283,7 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
                         <Button
                           variant="danger"
                           size="sm"
-                          onClick={() => handleCancelOrder(order.id, order.orderCode)}
+                          onClick={() => handleCancelOrderClick(order.id, order.orderCode)}
                           className="text-[11px] font-bold px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200"
                         >
                           HỦY ĐƠN
@@ -314,6 +356,28 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
           </div>
         </BottomSheet>
       )}
+
+      {/* Custom Cancel Order Confirm Modal */}
+      <ConfirmModal
+        isOpen={Boolean(cancellingOrder)}
+        onClose={() => {
+          if (!isCancellingOrder) {
+            setCancellingOrder(null);
+            setCancelOrderError(null);
+          }
+        }}
+        onConfirm={handleConfirmCancelOrder}
+        title="Hủy đơn hàng?"
+        message="Bạn có chắc chắn muốn hủy đơn hàng này không?"
+        highlightText={cancellingOrder ? `#${cancellingOrder.code}` : undefined}
+        highlightLabel="MÃ ĐƠN HÀNG"
+        warningText="Đơn hàng sau khi hủy sẽ không thể khôi phục."
+        confirmLabel="XÁC NHẬN HỦY ĐƠN"
+        cancelLabel="ĐÓNG"
+        variant="danger"
+        isLoading={isCancellingOrder}
+        errorMessage={cancelOrderError}
+      />
     </BottomSheet>
   );
 };

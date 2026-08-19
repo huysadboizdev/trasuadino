@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Category } from "@/lib/types";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
+import { useToast } from "../ui/Toast";
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
   onSave,
   category,
 }) => {
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(0);
@@ -41,7 +43,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!name.trim()) {
-      alert("Vui lòng nhập tên danh mục");
+      showToast("Vui lòng nhập tên danh mục", "warning");
       return;
     }
 
@@ -56,7 +58,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Lỗi khi lưu danh mục");
+      showToast("Lỗi khi lưu danh mục", "error");
     } finally {
       setIsSaving(false);
     }

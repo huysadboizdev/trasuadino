@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Category, Product } from "@/lib/types";
 import { CategoryModal } from "@/components/admin/CategoryModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Switch } from "@/components/ui/Switch";
@@ -17,14 +18,19 @@ export default function AdminCategoriesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
+  // Custom Delete Confirm Modal State
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const { showToast } = useToast();
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
       const [catRes, prodRes] = await Promise.all([
-        fetch("/api/categories"),
-        fetch("/api/products"),
+        fetch("/api/categories", { cache: "no-store" }),
+        fetch("/api/products", { cache: "no-store" }),
       ]);
 
       if (catRes.ok && prodRes.ok) {
@@ -66,29 +72,32 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const handleDelete = async (cat: Category) => {
-    const count = products.filter((p) => p.categoryId === cat.id).length;
-    if (count > 0) {
-      if (
-        !window.confirm(
-          `Danh mục này đang chứa ${count} món ăn. Bạn có chắc chắn muốn xóa không?`
-        )
-      ) {
-        return;
-      }
-    } else {
-      if (!window.confirm(`Xóa danh mục "${cat.name}"?`)) return;
-    }
+  const handleDeleteClick = (cat: Category) => {
+    setDeletingCategory(cat);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCategory) return;
 
     try {
-      const res = await fetch(`/api/categories/${cat.id}`, { method: "DELETE" });
+      setIsDeleting(true);
+      setDeleteError(null);
+      const res = await fetch(`/api/categories/${deletingCategory.id}`, { method: "DELETE" });
       if (res.ok) {
-        setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-        showToast(`Đã xóa danh mục "${cat.name}"`, "info");
+        setCategories((prev) => prev.filter((c) => c.id !== deletingCategory.id));
+        showToast(`Đã xóa danh mục "${deletingCategory.name}"`, "success");
+        setDeletingCategory(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.message || "Không thể xóa danh mục. Vui lòng thử lại.");
+        showToast(data.message || "Lỗi khi xóa danh mục", "error");
       }
     } catch (err) {
-      console.error(err);
+      setDeleteError("Lỗi kết nối máy chủ. Vui lòng thử lại.");
       showToast("Lỗi khi xóa danh mục", "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -180,7 +189,7 @@ export default function AdminCategoriesPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
           {categories.map((cat) => {
             const productCount = products.filter((p) => p.categoryId === cat.id).length;
 
@@ -240,7 +249,7 @@ export default function AdminCategoriesPage() {
                     <Button
                       variant="danger"
                       size="sm"
-                      onClick={() => handleDelete(cat)}
+                      onClick={() => handleDeleteClick(cat)}
                       className="text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 shadow-2xs px-2.5 py-1"
                     >
                       XÓA
@@ -262,6 +271,32 @@ export default function AdminCategoriesPage() {
         }}
         onSave={handleSaveCategory}
         category={editingCategory}
+      />
+
+      {/* Custom Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deletingCategory)}
+        onClose={() => {
+          if (!isDeleting) {
+            setDeletingCategory(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Xóa danh mục món?"
+        message={
+          deletingCategory && products.filter((p) => p.categoryId === deletingCategory.id).length > 0
+            ? `Danh mục này đang chứa ${products.filter((p) => p.categoryId === deletingCategory.id).length} món ăn. Bạn có chắc chắn muốn xóa không?`
+            : "Bạn có chắc chắn muốn xóa danh mục này không?"
+        }
+        highlightText={deletingCategory?.name}
+        highlightLabel="DANH MỤC ĐƯỢC CHỌN"
+        warningText="Các món thuộc danh mục này có thể cần được phân loại lại."
+        confirmLabel="XÓA DANH MỤC"
+        cancelLabel="HỦY"
+        variant="danger"
+        isLoading={isDeleting}
+        errorMessage={deleteError}
       />
     </div>
   );

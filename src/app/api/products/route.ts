@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -9,11 +12,18 @@ export async function GET(req: NextRequest) {
 
     const products = dataStore.getProducts(categoryId, search);
 
-    return NextResponse.json({
-      success: true,
-      products,
-      total: products.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        products,
+        total: products.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("Lỗi khi lấy danh sách món:", error);
     return NextResponse.json(
