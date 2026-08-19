@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/components/ui/Toast";
+import { FloatingContact } from "@/components/ui/FloatingContact";
 
 export const metadata: Metadata = {
   title: "Trà Sữa Dino - Uống là mê, Ăn là ghiền",
@@ -25,7 +26,10 @@ export default function RootLayout({
     <html lang="vi">
       <body className="min-h-screen bg-[#f7f5f0] text-neutral-900 antialiased selection:bg-brand-500 selection:text-white">
         <ToastProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            <FloatingContact />
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>
