@@ -156,7 +156,8 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
     NEW: { label: "ĐÃ NHẬN ĐƠN", variant: "danger", step: 1, desc: "Quán đã nhận và đang chuẩn bị xếp hàng pha chế." },
     PREPARING: { label: "ĐANG PHA CHẾ", variant: "warning", step: 2, desc: "Nhân viên đang pha trà và nướng bánh tươi cho bạn." },
     DELIVERING: { label: "ĐANG GIAO HÀNG", variant: "info", step: 3, desc: "Tài xế đang giao đơn hàng đến địa chỉ của bạn." },
-    COMPLETED: { label: "HOÀN TẤT", variant: "success", step: 4, desc: "Đơn hàng đã được giao thành công. Chúc bạn ngon miệng!" },
+    DELIVERED: { label: "GIAO THÀNH CÔNG", variant: "info", step: 4, desc: "Đơn hàng đã được giao đến bạn. Chúc bạn ngon miệng!" },
+    COMPLETED: { label: "HOÀN TẤT", variant: "success", step: 5, desc: "Đơn hàng đã hoàn tất thành công. Cảm ơn bạn!" },
     CANCELLED: { label: "ĐÃ HỦY", variant: "neutral", step: 0, desc: "Đơn hàng này đã bị hủy." },
   };
 

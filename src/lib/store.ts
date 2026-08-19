@@ -426,6 +426,13 @@ export const dataStore = {
       ord.orderStatus = status;
       ord.updatedAt = new Date().toISOString();
 
+      if (status === "COMPLETED") {
+        if (!ord.completedAt) {
+          ord.completedAt = new Date().toISOString();
+        }
+        ord.paymentStatus = "PAID";
+      }
+
       // Nếu đơn hàng bị HỦY (CANCELLED) và đơn này từng áp dụng mã voucher:
       // Hoàn lại số lượt sử dụng voucher cho hệ thống
       if (status === "CANCELLED" && prevStatus !== "CANCELLED" && ord.couponCode) {
@@ -996,7 +1003,7 @@ export const dataStore = {
       (o) => new Date(o.createdAt).toDateString() === today
     );
     const todayRevenue = todayOrders
-      .filter((o) => o.paymentStatus === "PAID" && o.orderStatus !== "CANCELLED")
+      .filter((o) => o.orderStatus === "COMPLETED")
       .reduce((sum, o) => sum + o.totalAmount, 0);
 
     return {

@@ -10,13 +10,15 @@ const PAGE_SIZE = 6;
 function getStatusBadge(status: OrderStatus): string {
   switch (status) {
     case "NEW":
-      return "🔴 MỚI NHẬN";
+      return "🟡 MỚI NHẬN";
     case "PREPARING":
-      return "🟡 ĐANG PHA CHẾ";
+      return "🟠 ĐANG PHA CHẾ";
     case "DELIVERING":
-      return "🚚 ĐANG GIAO HÀNG";
+      return "🔵 ĐANG GIAO";
+    case "DELIVERED":
+      return "🟢 GIAO HÀNG THÀNH CÔNG";
     case "COMPLETED":
-      return "✅ HOÀN THÀNH";
+      return "🟢 HOÀN TẤT";
     case "CANCELLED":
       return "❌ ĐÃ HỦY";
     default:
@@ -27,8 +29,9 @@ function getStatusBadge(status: OrderStatus): string {
 const statusNameMap: Record<OrderStatus, string> = {
   NEW: "MỚI NHẬN",
   PREPARING: "ĐANG PHA CHẾ",
-  DELIVERING: "ĐANG GIAO HÀNG",
-  COMPLETED: "HOÀN THÀNH",
+  DELIVERING: "ĐANG GIAO",
+  DELIVERED: "GIAO HÀNG THÀNH CÔNG",
+  COMPLETED: "HOÀN TẤT",
   CANCELLED: "ĐÃ HỦY",
 };
 

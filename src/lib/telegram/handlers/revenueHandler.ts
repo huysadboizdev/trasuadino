@@ -35,13 +35,14 @@ export async function renderRevenueReport(
   }
 
   const completedOrders = filteredOrders.filter(
-    (o) => o.paymentStatus === "PAID" && o.orderStatus !== "CANCELLED"
+    (o) => o.orderStatus === "COMPLETED"
   );
   const totalRevenue = completedOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const revenueFormatted = new Intl.NumberFormat("vi-VN").format(totalRevenue);
 
   const pendingCount = filteredOrders.filter((o) => o.orderStatus === "NEW" || o.orderStatus === "PREPARING").length;
   const deliveringCount = filteredOrders.filter((o) => o.orderStatus === "DELIVERING").length;
+  const deliveredCount = filteredOrders.filter((o) => o.orderStatus === "DELIVERED").length;
   const completedCount = filteredOrders.filter((o) => o.orderStatus === "COMPLETED").length;
   const cancelledCount = filteredOrders.filter((o) => o.orderStatus === "CANCELLED").length;
 
@@ -74,8 +75,9 @@ export async function renderRevenueReport(
 
 📈 <b>Phân bổ trạng thái:</b>
   ● 🟡 Đang xử lý: <b>${pendingCount}</b> đơn
-  ● 🚚 Đang giao: <b>${deliveringCount}</b> đơn
-  ● ✅ Đã hoàn thành: <b>${completedCount}</b> đơn
+  ● 🔵 Đang giao: <b>${deliveringCount}</b> đơn
+  ● 🟢 Đã giao tới khách: <b>${deliveredCount}</b> đơn
+  ● 🟢 Đã hoàn thành: <b>${completedCount}</b> đơn
   ● ❌ Đã hủy: <b>${cancelledCount}</b> đơn${topItemsText}
 ━━━━━━━━━━━━━━━━━━━━━
 <i>Bấm chọn kỳ báo cáo khác bên dưới:</i>`;

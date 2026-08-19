@@ -17,6 +17,7 @@ export async function PUT(
       "NEW",
       "PREPARING",
       "DELIVERING",
+      "DELIVERED",
       "COMPLETED",
       "CANCELLED",
     ];

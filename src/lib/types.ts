@@ -153,7 +153,7 @@ export interface Coupon {
   discountPercent?: number; // Hỗ trợ tương thích ngược dữ liệu cũ
 }
 
-export type OrderStatus = "NEW" | "PREPARING" | "DELIVERING" | "COMPLETED" | "CANCELLED";
+export type OrderStatus = "NEW" | "PREPARING" | "DELIVERING" | "DELIVERED" | "COMPLETED" | "CANCELLED";
 export type PaymentStatus = "PENDING" | "PAID" | "CANCELLED";
 export type PaymentMethod = "SEPAY_QR" | "COD" | "MOMO";
 
@@ -192,6 +192,7 @@ export interface Order {
   items: OrderItem[];
   createdAt: string;
   updatedAt?: string;
+  completedAt?: string;
 }
 
 export interface StoreSetting {

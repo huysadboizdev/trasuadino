@@ -64,22 +64,26 @@ export const keyboards = {
   orderDetail: (orderId: string, currentStatus: OrderStatus, phone?: string): InlineKeyboardMarkup => {
     const actionRows: InlineKeyboardButton[][] = [];
 
-    // Các nút chuyển trạng thái phù hợp
+    // Các nút chuyển trạng thái phù hợp theo workflow chuẩn
     if (currentStatus === "NEW") {
       actionRows.push([
-        { text: "🧑‍🍳 Nhận đơn & Pha chế", callback_data: `order:status:${orderId}:PREPARING` },
-        { text: "❌ Hủy đơn", callback_data: `order:confirm_cancel:${orderId}` },
+        { text: "👨‍🍳 NHẬN ĐƠN & PHA CHẾ", callback_data: `order:status:${orderId}:PREPARING` },
+        { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${orderId}:DELIVERING` },
       ]);
+      actionRows.push([{ text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${orderId}` }]);
     } else if (currentStatus === "PREPARING") {
       actionRows.push([
-        { text: "🚚 Bắt đầu giao hàng", callback_data: `order:status:${orderId}:DELIVERING` },
-        { text: "✅ Hoàn thành luôn", callback_data: `order:status:${orderId}:COMPLETED` },
+        { text: "🚚 BẮT ĐẦU GIAO", callback_data: `order:status:${orderId}:DELIVERING` },
+        { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${orderId}` },
       ]);
-      actionRows.push([{ text: "❌ Hủy đơn", callback_data: `order:confirm_cancel:${orderId}` }]);
     } else if (currentStatus === "DELIVERING") {
       actionRows.push([
-        { text: "✅ Khách đã nhận (Hoàn thành)", callback_data: `order:status:${orderId}:COMPLETED` },
-        { text: "❌ Hủy / Hoàn đơn", callback_data: `order:confirm_cancel:${orderId}` },
+        { text: "✅ GIAO HÀNG THÀNH CÔNG", callback_data: `order:status:${orderId}:DELIVERED` },
+        { text: "❌ HỦY ĐƠN", callback_data: `order:confirm_cancel:${orderId}` },
+      ]);
+    } else if (currentStatus === "DELIVERED") {
+      actionRows.push([
+        { text: "💰 XÁC NHẬN HOÀN TẤT", callback_data: `order:status:${orderId}:COMPLETED` },
       ]);
     }
 

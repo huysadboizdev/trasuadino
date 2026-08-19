@@ -32,9 +32,7 @@ export default function AdminDashboardPage() {
           (o) => new Date(o.createdAt).toDateString() === today
         );
         const todayRevenue = todayOrders
-          .filter(
-            (o) => o.paymentStatus === "PAID" && o.orderStatus !== "CANCELLED"
-          )
+          .filter((o) => o.orderStatus === "COMPLETED")
           .reduce((sum, o) => sum + o.totalAmount, 0);
 
         setStats({
