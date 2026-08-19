@@ -29,14 +29,46 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
   const [cancellingOrder, setCancellingOrder] = useState<{ id: string; code: string } | null>(null);
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
+  const [lookupPhoneInput, setLookupPhoneInput] = useState<string>("");
 
-  const fetchUserOrders = async () => {
-    if (!user?.email && !user?.phone) return;
+  const fetchUserOrders = async (manualPhone?: string) => {
     try {
       setIsLoading(true);
-      const queryParam = user.email
-        ? `email=${encodeURIComponent(user.email)}`
-        : `phone=${encodeURIComponent(user.phone || "")}`;
+      let queryParam = "";
+
+      if (user?.email) {
+        queryParam = `email=${encodeURIComponent(user.email)}`;
+      } else if (user?.phone) {
+        queryParam = `phone=${encodeURIComponent(user.phone)}`;
+      } else {
+        // Khách vãng lai chưa đăng nhập: lấy từ localStorage hoặc số điện thoại nhập tra cứu
+        const targetPhone =
+          manualPhone !== undefined
+            ? manualPhone
+            : lookupPhoneInput ||
+              (typeof window !== "undefined" ? localStorage.getItem("dino_guest_phone") || "" : "");
+
+        const rawCodes = typeof window !== "undefined" ? localStorage.getItem("dino_guest_orders") : null;
+        let guestCodes = "";
+        try {
+          if (rawCodes) {
+            const arr = JSON.parse(rawCodes);
+            if (Array.isArray(arr) && arr.length > 0) guestCodes = arr.join(",");
+          }
+        } catch (e) {}
+
+        if (targetPhone.trim()) {
+          queryParam = `phone=${encodeURIComponent(targetPhone.trim())}`;
+          if (!lookupPhoneInput) setLookupPhoneInput(targetPhone.trim());
+        } else if (guestCodes) {
+          queryParam = `codes=${encodeURIComponent(guestCodes)}`;
+        } else {
+          setOrders([]);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const res = await fetch(`/api/user/orders?${queryParam}`);
       if (res.ok) {
         const data = await res.json();
@@ -49,11 +81,11 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
     }
   };
 
-  // Realtime lắng nghe cập nhật trạng thái đơn hàng của User
+  // Realtime lắng nghe cập nhật trạng thái đơn hàng của User hoặc Khách vãng lai
   useRealtime({
     role: "customer",
     userId: user?.id,
-    phone: user?.phone,
+    phone: user?.phone || lookupPhoneInput || (typeof window !== "undefined" ? localStorage.getItem("dino_guest_phone") || undefined : undefined),
     onOrderStatusUpdated: (updatedOrder) => {
       setOrders((prev) => {
         const exists = prev.some((o) => o.id === updatedOrder.id || o.orderCode === updatedOrder.orderCode);
@@ -153,12 +185,34 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
             LỊCH SỬ ĐẶT HÀNG ({orders.length})
           </span>
           <button
-            onClick={fetchUserOrders}
+            onClick={() => fetchUserOrders()}
             className="text-xs font-black uppercase text-brand-900 underline"
           >
             Làm Mới Trạng Thái
           </button>
         </div>
+
+        {/* Thanh tra cứu theo số điện thoại cho khách vãng lai */}
+        {!user && (
+          <div className="bg-neutral-50 p-2.5 rounded-2xl border border-neutral-200 flex gap-2">
+            <input
+              type="tel"
+              value={lookupPhoneInput}
+              onChange={(e) => setLookupPhoneInput(e.target.value)}
+              placeholder="Nhập SĐT để tra cứu đơn..."
+              className="flex-1 px-3 py-1.5 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+            />
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => fetchUserOrders(lookupPhoneInput)}
+              className="text-xs font-black uppercase bg-brand-900 text-white rounded-xl px-3"
+            >
+              TRA CỨU
+            </Button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="py-12 text-center">
@@ -170,10 +224,10 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
         ) : orders.length === 0 ? (
           <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
             <p className="text-sm font-black text-neutral-800 uppercase">
-              BẠN CHƯA CÓ ĐƠN HÀNG NÀO
+              CHƯA TÌM THẤY ĐƠN HÀNG NÀO
             </p>
             <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-              Hãy chọn cho mình một ly trà sữa hoặc món bánh ngon lành ngoài trang chủ nhé!
+              Hãy chọn cho mình một ly trà sữa hoặc món bánh ngon lành ngoài trang chủ, hoặc nhập SĐT nhận hàng để tra cứu nhé!
             </p>
           </div>
         ) : (

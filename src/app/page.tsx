@@ -319,44 +319,27 @@ export default function StorefrontHomePage() {
       if (user.name) setCustomerName(user.name);
       if (user.phone) setCustomerPhone(user.phone);
       if (user.address) setDeliveryAddress(user.address);
+    } else {
+      // Tự động khôi phục thông tin từ lần đặt trước (dành cho khách chưa đăng nhập)
+      try {
+        const savedName = localStorage.getItem("dino_guest_name");
+        const savedPhone = localStorage.getItem("dino_guest_phone");
+        const savedAddress = localStorage.getItem("dino_guest_address");
+        if (savedName && !customerName) setCustomerName(savedName);
+        if (savedPhone && !customerPhone) setCustomerPhone(savedPhone);
+        if (savedAddress && !deliveryAddress) setDeliveryAddress(savedAddress);
+      } catch (e) {}
     }
   }, [user]);
 
-  // Kiểm tra thông tin giao hàng khách hàng
-  const checkCustomerInfo = (): { isValid: boolean; missing: { name?: boolean; phone?: boolean; address?: boolean } } => {
-    const nameVal = (customerName || user?.name || "").trim();
-    const phoneVal = (customerPhone || user?.phone || "").trim().replace(/\s/g, "");
-    const addressVal = (deliveryAddress || user?.address || "").trim();
-
-    const isNameOk = nameVal.length >= 2;
-    const isPhoneOk = /^[0-9+]{9,12}$/.test(phoneVal);
-    const isAddressOk = addressVal.length >= 5;
-
-    return {
-      isValid: isNameOk && isPhoneOk && isAddressOk,
-      missing: {
-        name: !isNameOk,
-        phone: !isPhoneOk,
-        address: !isAddressOk,
-      },
-    };
-  };
-
-  // Handler khi bấm "ĐẶT HÀNG NGAY →" hoặc "Thanh toán" trong giỏ
+  // Handler khi bấm "ĐẶT HÀNG NGAY →" hoặc "Thanh toán" trong giỏ (Không cần đăng nhập / đăng ký)
   const handleInitiateCheckout = () => {
     if (cart.length === 0) {
       showToast("Giỏ hàng của bạn đang trống", "warning");
       return;
     }
 
-    const check = checkCustomerInfo();
-    if (!check.isValid) {
-      setMissingFieldsState(check.missing);
-      setIsMissingInfoModalOpen(true);
-      return;
-    }
-
-    // Đã đủ thông tin, mở modal thanh toán
+    // Mở trực tiếp popup ĐẶT HÀNG GIAO TẬN NƠI
     setIsCartDrawerOpen(false);
     setIsCheckoutOpen(true);
   };
@@ -749,14 +732,6 @@ export default function StorefrontHomePage() {
 
     if (isOrdering) return;
 
-    const check = checkCustomerInfo();
-    if (!check.isValid) {
-      setMissingFieldsState(check.missing);
-      setIsCheckoutOpen(false);
-      setIsMissingInfoModalOpen(true);
-      return;
-    }
-
     if (!validateOrderForm()) {
       showToast("Vui lòng điền đủ họ tên, SĐT và địa chỉ nhận hàng", "warning");
       return;
@@ -819,6 +794,21 @@ export default function StorefrontHomePage() {
           totalAmount: data.order.totalAmount,
           paymentMethod: data.order.paymentMethod || paymentMethod,
         });
+
+        // Tự động lưu thông tin khách & mã đơn vào localStorage cho khách vãng lai
+        try {
+          localStorage.setItem("dino_guest_name", customerName.trim());
+          localStorage.setItem("dino_guest_phone", customerPhone.trim());
+          localStorage.setItem("dino_guest_address", deliveryAddress.trim());
+
+          const rawOrders = localStorage.getItem("dino_guest_orders");
+          const existingOrders: string[] = rawOrders ? JSON.parse(rawOrders) : [];
+          if (!existingOrders.includes(data.order.orderCode)) {
+            existingOrders.unshift(data.order.orderCode);
+            localStorage.setItem("dino_guest_orders", JSON.stringify(existingOrders.slice(0, 20)));
+          }
+        } catch (e) {}
+
         setCart([]);
         setAppliedCoupon(null);
         setInputCouponCode("");
