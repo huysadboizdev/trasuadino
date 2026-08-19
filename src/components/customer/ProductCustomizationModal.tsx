@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Product, ProductOptionGroup, ProductOption } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ProductWatermark } from "../ui/ProductWatermark";
 
 export interface CustomizationResult {
   product: Product;
@@ -348,13 +349,14 @@ export const ProductCustomizationModal: React.FC<ProductCustomizationModalProps>
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-neutral-200 bg-white/95 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
             {product.image && (
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden bg-neutral-100 flex-shrink-0 border border-neutral-200/80 shadow-2xs">
+              <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden bg-neutral-100 flex-shrink-0 border border-neutral-200/80 shadow-2xs">
                 <img
                   src={product.image}
                   alt={product.name}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
+                <ProductWatermark size="xs" />
               </div>
             )}
             <div className="min-w-0 flex-1">

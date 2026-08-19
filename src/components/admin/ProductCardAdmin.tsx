@@ -6,6 +6,7 @@ import { Badge } from "../ui/Badge";
 import { Switch } from "../ui/Switch";
 import { Button } from "../ui/Button";
 import { useToast } from "../ui/Toast";
+import { ProductWatermark } from "../ui/ProductWatermark";
 
 interface ProductCardAdminProps {
   product: Product;
@@ -82,12 +83,13 @@ export const ProductCardAdmin: React.FC<ProductCardAdminProps> = ({
               }}
             />
             {!product.isAvailable && (
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-10">
                 <span className="text-white text-[9px] sm:text-[10px] font-black tracking-wider px-1.5 py-0.5 bg-rose-600 rounded-md">
                   HẾT HÀNG
                 </span>
               </div>
             )}
+            <ProductWatermark size="sm" />
           </div>
 
           <div className="flex-1 min-w-0">
