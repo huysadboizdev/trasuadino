@@ -37,10 +37,12 @@ export async function POST(req: NextRequest) {
       : "other";
     console.log(`[Telegram Webhook Received] update_id=${payload.update_id || "N/A"} type=${updateType}`);
 
-    // 2. Xử lý update bất đồng bộ để trả về 200 OK ngay cho Telegram
-    processTelegramWebhookUpdate(payload).catch((err) => {
+    // 2. Xử lý update đồng bộ và an toàn
+    try {
+      await processTelegramWebhookUpdate(payload);
+    } catch (err) {
       console.error("[Telegram Webhook Processing Error]:", err);
-    });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -4035,7 +4035,7 @@
       "categoryName": "Trà Sữa Mix Kem",
       "isAvailable": true,
       "isFeatured": true,
-      "salesCount": 243,
+      "salesCount": 244,
       "options": [
         {
           "id": "optg-size-sm3hkp",
@@ -7221,6 +7221,35 @@
     {
       "customerName": "Hà Quang Huy",
       "customerPhone": "0987789987",
+      "userId": "usr-system-guest",
+      "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
+      "note": "",
+      "paymentMethod": "COD",
+      "paymentStatus": "PENDING",
+      "orderStatus": "PREPARING",
+      "subtotalAmount": 39000,
+      "discountAmount": 0,
+      "totalAmount": 39000,
+      "items": [
+        {
+          "productId": "nhung-mk-25",
+          "productName": "Choco Phomai Kem Mặn",
+          "quantity": 1,
+          "unitPrice": 39000,
+          "optionsNote": "Size Vừa (M) • 70% Đường (Vừa ngọt) • 100% Đá (Mát lạnh)",
+          "totalPrice": 39000
+        }
+      ],
+      "id": "ord-1787137826669",
+      "orderCode": "DINO-869",
+      "trackingToken": "trk_1787137826669_wgjgv5z4",
+      "isGuest": true,
+      "createdAt": "2026-08-19T11:10:26.669Z",
+      "updatedAt": "2026-08-19T11:11:47.729Z"
+    },
+    {
+      "customerName": "Hà Quang Huy",
+      "customerPhone": "0987789987",
       "deliveryAddress": "Ngõ 942 Đường Láng, Phường Láng, Hà Nội",
       "note": "",
       "paymentMethod": "SEPAY_QR",
@@ -7597,15 +7626,15 @@
     {
       "id": "sess-1787106857410-866",
       "userId": "usr-admin",
-      "tokenHash": "fa38957f2e28af8bd14ba3ad2cb977d45958d7d42f3cc1ec79986afca2500360",
+      "tokenHash": "e476e11ecffb38cddcb6e0b4c0c154b70646870352f423e41e485a5a03ff55af",
       "familyId": "fam-f980ce0fb6a2d3dc8f65478d3dede81e",
       "role": "ADMIN",
       "ipAddress": "::1",
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
-      "expiresAt": "2026-08-22T06:58:54.761Z",
-      "lastUsedAt": "2026-08-19T06:58:54.763Z",
+      "expiresAt": "2026-08-22T11:11:27.404Z",
+      "lastUsedAt": "2026-08-19T11:11:27.407Z",
       "createdAt": "2026-08-19T02:34:17.410Z",
-      "updatedAt": "2026-08-19T06:58:54.763Z"
+      "updatedAt": "2026-08-19T11:11:27.407Z"
     },
     {
       "id": "sess-1787063930310-164",
@@ -7986,6 +8015,11 @@
       "tokenHash": "9d09423a5989a64329c0f231a9c32d3357add23786da6219bbba4dda5a914ced",
       "familyId": "fam-1f7d9517cf100d063af9740f17f59b18",
       "rotatedAt": "2026-08-19T09:51:51.205Z"
+    },
+    {
+      "tokenHash": "fa38957f2e28af8bd14ba3ad2cb977d45958d7d42f3cc1ec79986afca2500360",
+      "familyId": "fam-f980ce0fb6a2d3dc8f65478d3dede81e",
+      "rotatedAt": "2026-08-19T11:11:27.407Z"
     }
   ],
   "users": [
