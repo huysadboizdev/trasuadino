@@ -21,6 +21,7 @@ import {
 import { ProductCard } from "@/components/customer/ProductCard";
 import { MissingProfileModal } from "@/components/customer/MissingProfileModal";
 import { SepayQrPaymentModal } from "@/components/payment/SepayQrPaymentModal";
+import { Footer } from "@/components/ui/Footer";
 import { MapPin } from "lucide-react";
 
 interface CartItem {
@@ -837,7 +838,7 @@ export default function StorefrontHomePage() {
   const isUserAdminOrStaff = user?.role === "ADMIN" || user?.role === "STAFF";
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-neutral-900 selection:bg-brand-500 selection:text-white pb-24">
+    <div className="min-h-screen bg-[#faf8f5] text-neutral-900 selection:bg-brand-500 selection:text-white flex flex-col justify-between">
       {/* 1. HEADER CHUYÊN NGHIỆP, CÂN ĐỐI & CHUẨN RESPONSIVE TOÀN BỘ THIẾT BỊ */}
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-neutral-200/80 shadow-2xs transition-all safe-top">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
@@ -1317,7 +1318,10 @@ export default function StorefrontHomePage() {
         )}
       </main>
 
-      {/* 5. FLOATING BOTTOM BAR (Khi có món trong giỏ) */}
+      {/* 5. FOOTER CHUYÊN NGHIỆP */}
+      <Footer />
+
+      {/* 6. FLOATING BOTTOM BAR (Khi có món trong giỏ) */}
       {cart.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 p-3 sm:p-3.5 bg-white/95 backdrop-blur-md border-t border-neutral-200 shadow-floating safe-bottom animate-slide-up w-full">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 min-w-0">
