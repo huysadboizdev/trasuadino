@@ -20,43 +20,124 @@ jobs:
           script: |
             set -e
 
+            echo "========================================"
+            echo "      TRASUADINO AUTO DEPLOY"
+            echo "========================================"
+
+            echo "===== LOAD NVM / NODE.JS ====="
+
+            export NVM_DIR="/root/.nvm"
+
+            if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+              echo "ERROR: NVM not found at $NVM_DIR"
+              exit 1
+            fi
+
+            . "$NVM_DIR/nvm.sh"
+
+            nvm use 20
+
+            echo "Node:"
+            node -v
+
+            echo "NPM:"
+            npm -v
+
+            echo "NPM path:"
+            which npm
+
+            echo "Node path:"
+            which node
+
+            echo "========================================"
+            echo "===== CHECK PM2 ====="
+            echo "========================================"
+
+            if ! command -v pm2 >/dev/null 2>&1; then
+              echo "ERROR: PM2 not found"
+              exit 1
+            fi
+
+            echo "PM2:"
+            pm2 -v
+
+            echo "PM2 path:"
+            which pm2
+
+            echo "========================================"
+            echo "===== ENTER PROJECT ====="
+            echo "========================================"
+
             cd /var/trasuadino
 
+            echo "Project:"
+            pwd
+
+            echo "========================================"
             echo "===== BACKUP RUNTIME DATA ====="
+            echo "========================================"
 
             mkdir -p /var/trasuadino-runtime
 
             if [ -f data/store_data.json ]; then
               cp data/store_data.json /var/trasuadino-runtime/store_data.json
+              echo "Runtime data backed up."
+            else
+              echo "No runtime data file found."
             fi
 
+            echo "========================================"
             echo "===== UPDATE CODE ====="
+            echo "========================================"
 
             git fetch origin main
+
             git reset --hard origin/main
 
+            echo "Current commit:"
+            git log -1 --oneline
+
+            echo "========================================"
             echo "===== RESTORE RUNTIME DATA ====="
+            echo "========================================"
 
             if [ -f /var/trasuadino-runtime/store_data.json ]; then
               cp /var/trasuadino-runtime/store_data.json data/store_data.json
+              echo "Runtime data restored."
+            else
+              echo "No runtime backup found."
             fi
 
+            echo "========================================"
             echo "===== INSTALL DEPENDENCIES ====="
+            echo "========================================"
 
             npm ci
 
+            echo "========================================"
             echo "===== PRISMA GENERATE ====="
+            echo "========================================"
 
             npx prisma generate
 
+            echo "========================================"
             echo "===== BUILD NEXT.JS ====="
+            echo "========================================"
 
             npm run build
 
+            echo "========================================"
             echo "===== RESTART PM2 ====="
+            echo "========================================"
 
             pm2 restart trasuadino
 
-            echo "===== DEPLOY SUCCESS ====="
+            echo "========================================"
+            echo "===== PM2 STATUS ====="
+            echo "========================================"
 
             pm2 status
+
+            echo "========================================"
+            echo "      DEPLOYMENT SUCCESS"
+            echo "========================================"
