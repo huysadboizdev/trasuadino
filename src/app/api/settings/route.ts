@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore } from "@/lib/store";
+import { realtimeHub } from "@/lib/realtime";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,6 +31,10 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     const updated = dataStore.updateSettings(body);
+
+    // Phát sự kiện Realtime cập nhật trạng thái quán
+    realtimeHub.emitStoreStatusUpdated(updated);
+
     return NextResponse.json({
       success: true,
       settings: updated,

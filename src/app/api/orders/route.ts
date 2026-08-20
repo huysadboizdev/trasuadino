@@ -35,6 +35,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Kiểm tra trạng thái đóng/mở cửa của quán
+    const settings = dataStore.getSettings();
+    if (!settings.isOpen) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Xin lỗi quý khách, quán tạm thời đóng cửa, xin quý khách vui lòng quay lại sau.",
+        },
+        { status: 400 }
+      );
+    }
+
     const body = await req.json();
     const {
       customerName,

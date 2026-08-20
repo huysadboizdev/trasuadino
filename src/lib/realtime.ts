@@ -1,4 +1,4 @@
-import { Order } from "./types";
+import { Order, StoreSetting } from "./types";
 
 type EventCallback = (event: string, data: any) => void;
 
@@ -75,6 +75,14 @@ class RealtimeHub {
     if (order.orderCode) {
       this.publish(`order:${order.orderCode}`, "order:status_updated", order);
     }
+  }
+
+  /**
+   * Bắn sự kiện Cập nhật trạng thái quán (Đóng / Mở cửa) tới tất cả khách hàng và Admin
+   */
+  emitStoreStatusUpdated(settings: StoreSetting) {
+    this.publish("admin:orders", "store:status_updated", settings);
+    this.publish("public:store", "store:status_updated", settings);
   }
 }
 

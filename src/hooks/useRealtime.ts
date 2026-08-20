@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { Order } from "@/lib/types";
+import { Order, StoreSetting } from "@/lib/types";
 
 interface UseRealtimeOptions {
   role?: "admin" | "staff" | "customer";
@@ -9,6 +9,7 @@ interface UseRealtimeOptions {
   phone?: string;
   onOrderCreated?: (order: Order) => void;
   onOrderStatusUpdated?: (order: Order) => void;
+  onStoreStatusUpdated?: (settings: StoreSetting) => void;
   onReconnect?: () => void;
 }
 
@@ -18,6 +19,7 @@ export function useRealtime({
   phone,
   onOrderCreated,
   onOrderStatusUpdated,
+  onStoreStatusUpdated,
   onReconnect,
 }: UseRealtimeOptions) {
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -28,6 +30,7 @@ export function useRealtime({
   const callbacksRef = useRef({
     onOrderCreated,
     onOrderStatusUpdated,
+    onStoreStatusUpdated,
     onReconnect,
   });
 
@@ -35,6 +38,7 @@ export function useRealtime({
     callbacksRef.current = {
       onOrderCreated,
       onOrderStatusUpdated,
+      onStoreStatusUpdated,
       onReconnect,
     };
   });
@@ -79,6 +83,15 @@ export function useRealtime({
         callbacksRef.current.onOrderStatusUpdated?.(data);
       } catch (err) {
         console.error("[Realtime parse error - order:status_updated]:", err);
+      }
+    });
+
+    es.addEventListener("store:status_updated", (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as StoreSetting;
+        callbacksRef.current.onStoreStatusUpdated?.(data);
+      } catch (err) {
+        console.error("[Realtime parse error - store:status_updated]:", err);
       }
     });
 

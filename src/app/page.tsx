@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { Product, Category } from "@/lib/types";
+import { Category, Product, StoreSetting } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -23,7 +23,7 @@ import { MissingProfileModal } from "@/components/customer/MissingProfileModal";
 import { OnboardingGuideModal } from "@/components/customer/OnboardingGuideModal";
 import { SepayQrPaymentModal } from "@/components/payment/SepayQrPaymentModal";
 import { Footer } from "@/components/ui/Footer";
-import { MapPin, Truck, Phone, Copy, Check, ExternalLink } from "lucide-react";
+import { MapPin, Truck, Phone, Copy, Check, ExternalLink, AlertCircle } from "lucide-react";
 
 interface CartItem {
   id: string;
@@ -194,6 +194,8 @@ export default function StorefrontHomePage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [storeSettings, setStoreSettings] = useState<StoreSetting | null>(null);
+  const [isStoreOpen, setIsStoreOpen] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState<boolean>(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
@@ -299,7 +301,7 @@ export default function StorefrontHomePage() {
   const [profileFocusField, setProfileFocusField] = useState<"name" | "phone" | "address" | undefined>(undefined);
   const [pendingOrderAfterProfile, setPendingOrderAfterProfile] = useState<boolean>(false);
 
-  // Realtime lắng nghe cập nhật trạng thái đơn hàng khi khách đang duyệt menu
+  // Realtime lắng nghe cập nhật trạng thái đơn hàng & trạng thái quán khi khách đang duyệt menu
   useRealtime({
     role: "customer",
     userId: user?.id,
@@ -314,6 +316,19 @@ export default function StorefrontHomePage() {
       const msg = statusLabels[updatedOrder.orderStatus];
       if (msg) {
         showToast(msg, updatedOrder.orderStatus === "COMPLETED" ? "success" : "info");
+      }
+    },
+    onStoreStatusUpdated: (updatedSettings) => {
+      if (updatedSettings) {
+        setStoreSettings(updatedSettings);
+        if (updatedSettings.isOpen !== undefined) {
+          setIsStoreOpen(updatedSettings.isOpen);
+          if (!updatedSettings.isOpen) {
+            showToast("📢 Quán vừa chuyển sang trạng thái tạm đóng cửa nghỉ bán.", "info");
+          } else {
+            showToast("🎉 Quán đã mở cửa nhận đơn hàng trở lại!", "success");
+          }
+        }
       }
     },
   });
@@ -338,6 +353,11 @@ export default function StorefrontHomePage() {
 
   // Handler khi bấm "ĐẶT HÀNG NGAY →" hoặc "Thanh toán" trong giỏ (Không cần đăng nhập / đăng ký)
   const handleInitiateCheckout = () => {
+    if (!isStoreOpen) {
+      showToast("Xin lỗi quý khách, quán tạm thời đóng cửa, xin quý khách vui lòng quay lại sau.", "warning");
+      return;
+    }
+
     if (cart.length === 0) {
       showToast("Giỏ hàng của bạn đang trống", "warning");
       return;
@@ -389,15 +409,25 @@ export default function StorefrontHomePage() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [catRes, prodRes] = await Promise.all([
+      const [catRes, prodRes, setRes] = await Promise.all([
         fetch("/api/categories"),
         fetch("/api/products"),
+        fetch("/api/settings"),
       ]);
       if (catRes.ok && prodRes.ok) {
         const catData = await catRes.json();
         const prodData = await prodRes.json();
         setCategories(catData.categories || []);
         setProducts(prodData.products || []);
+      }
+      if (setRes && setRes.ok) {
+        const setData = await setRes.json();
+        if (setData.settings) {
+          setStoreSettings(setData.settings);
+          if (setData.settings.isOpen !== undefined) {
+            setIsStoreOpen(setData.settings.isOpen);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -750,6 +780,11 @@ export default function StorefrontHomePage() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!isStoreOpen) {
+      showToast("Xin lỗi quý khách, quán tạm thời đóng cửa, xin quý khách vui lòng quay lại sau.", "warning");
+      return;
+    }
+
     if (isOrdering) return;
 
     if (!validateOrderForm()) {
@@ -843,6 +878,12 @@ export default function StorefrontHomePage() {
         setInputCouponCode("");
         setIsCheckoutOpen(false);
         setIsCartDrawerOpen(false);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(
+          errData.message || "Xin lỗi quý khách, quán tạm thời đóng cửa, xin quý khách vui lòng quay lại sau.",
+          "error"
+        );
       }
     } catch (err) {
       console.error(err);
@@ -913,10 +954,17 @@ export default function StorefrontHomePage() {
                 <span className="font-black text-brand-950 text-xs xs:text-sm sm:text-base md:text-lg tracking-tight uppercase truncate">
                   TRÀ SỮA DINO
                 </span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8px] xs:text-[9px] sm:text-[10px] font-black border border-emerald-200/80 flex-shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Mở cửa
-                </span>
+                {isStoreOpen ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8px] xs:text-[9px] sm:text-[10px] font-black border border-emerald-200/80 flex-shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Mở cửa
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[8px] xs:text-[9px] sm:text-[10px] font-black border border-rose-200/80 flex-shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    Tạm đóng cửa
+                  </span>
+                )}
               </div>
               <p className="text-[10px] sm:text-xs text-brand-700/90 font-bold hidden xs:block truncate mt-0.5">
                 Trà Tươi Mỗi Ngày • Bánh Nóng Hổi
@@ -1116,6 +1164,28 @@ export default function StorefrontHomePage() {
             </span>
           </div>
         </div>
+
+        {/* BANNER THÔNG BÁO TẠM ĐÓNG CỬA NGHỈ BÁN */}
+        {!isStoreOpen && (
+          <div className="bg-rose-50 border-2 border-rose-300/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 text-rose-950 flex items-start gap-3 shadow-xs animate-fade-in select-none">
+            <div className="h-9 w-9 rounded-xl bg-rose-200/80 text-rose-800 flex items-center justify-center font-black text-lg flex-shrink-0 border border-rose-300">
+              🔒
+            </div>
+            <div className="space-y-1 text-xs sm:text-sm flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-rose-900 uppercase tracking-tight text-sm sm:text-base">
+                  Quán tạm thời đóng cửa nghỉ bán
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-rose-200/80 text-rose-800 text-[10px] font-black uppercase">
+                  Tạm ngưng nhận đơn
+                </span>
+              </div>
+              <p className="text-rose-800 font-medium leading-relaxed">
+                Quý khách vẫn có thể xem danh sách món, giá bán và các loại topping. Tính năng đặt hàng sẽ mở lại khi quán bắt đầu nhận đơn (Giờ mở cửa: <b>{storeSettings?.openTime || "08:00"} – {storeSettings?.closeTime || "22:30"}</b>).
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Thanh Tìm Kiếm & Lọc Nhanh */}
         <div className="space-y-2.5 w-full max-w-full">
@@ -1483,9 +1553,14 @@ export default function StorefrontHomePage() {
               variant="primary"
               size="md"
               onClick={handleInitiateCheckout}
-              className="text-xs font-black uppercase tracking-wider px-5 sm:px-7 py-3 sm:py-3.5 bg-brand-900 hover:bg-brand-950 text-white rounded-2xl shadow-md active:scale-95 flex-shrink-0"
+              disabled={!isStoreOpen}
+              className={`text-xs font-black uppercase tracking-wider px-5 sm:px-7 py-3 sm:py-3.5 rounded-2xl shadow-md active:scale-95 flex-shrink-0 ${
+                !isStoreOpen
+                  ? "bg-neutral-300 text-neutral-500 cursor-not-allowed hover:bg-neutral-300"
+                  : "bg-brand-900 hover:bg-brand-950 text-white"
+              }`}
             >
-              Đặt hàng ngay →
+              {isStoreOpen ? "Đặt hàng ngay →" : "Quán tạm đóng cửa"}
             </Button>
           </div>
         </div>
@@ -1514,9 +1589,16 @@ export default function StorefrontHomePage() {
               variant="primary"
               size="md"
               onClick={handleInitiateCheckout}
-              className="flex-1 text-xs font-black uppercase py-3.5 bg-brand-900 hover:bg-brand-950 text-white rounded-2xl shadow-md"
+              disabled={!isStoreOpen}
+              className={`flex-1 text-xs font-black uppercase py-3.5 rounded-2xl shadow-md ${
+                !isStoreOpen
+                  ? "bg-neutral-300 text-neutral-500 cursor-not-allowed hover:bg-neutral-300"
+                  : "bg-brand-900 hover:bg-brand-950 text-white"
+              }`}
             >
-              Thanh toán ({formatCurrency(cartTotalAmount)})
+              {isStoreOpen
+                ? `Thanh toán (${formatCurrency(cartTotalAmount)})`
+                : "Quán tạm đóng cửa"}
             </Button>
           </div>
         }
@@ -1637,14 +1719,32 @@ export default function StorefrontHomePage() {
             size="md"
             fullWidth
             isLoading={isOrdering}
+            disabled={!isStoreOpen}
             onClick={handlePlaceOrder}
-            className="text-xs sm:text-sm font-black uppercase bg-brand-900 hover:bg-brand-950 text-white py-3.5 rounded-2xl shadow-md"
+            className={`text-xs sm:text-sm font-black uppercase py-3.5 rounded-2xl shadow-md ${
+              !isStoreOpen
+                ? "bg-neutral-300 text-neutral-500 cursor-not-allowed hover:bg-neutral-300"
+                : "bg-brand-900 hover:bg-brand-950 text-white"
+            }`}
           >
-            Xác nhận đặt hàng ({formatCurrency(finalTotalAmount)})
+            {isStoreOpen
+              ? `Xác nhận đặt hàng (${formatCurrency(finalTotalAmount)})`
+              : "Quán tạm đóng cửa (Không nhận đơn)"}
           </Button>
         }
       >
         <form onSubmit={handlePlaceOrder} className="space-y-3.5">
+          {!isStoreOpen && (
+            <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-900 text-xs font-medium space-y-1 select-none">
+              <div className="font-bold flex items-center gap-1.5 text-rose-950">
+                <AlertCircle className="w-4 h-4 text-rose-600" />
+                <span>Quán đang tạm đóng cửa nghỉ bán</span>
+              </div>
+              <p>
+                Xin lỗi quý khách, quán tạm thời đóng cửa, xin quý khách vui lòng quay lại sau.
+              </p>
+            </div>
+          )}
           {!user && (
             <div className="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200 flex items-center justify-between text-xs text-neutral-700">
               <span>Đăng nhập để lưu địa chỉ và theo dõi đơn:</span>

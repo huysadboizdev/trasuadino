@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
         unsubs.push(realtimeHub.subscribe(`user:${userId}`, sendEvent));
       }
 
+      // Kênh công khai trạng thái quán
+      unsubs.push(realtimeHub.subscribe("public:store", sendEvent));
+
       if (phone) {
         const cleanPhone = phone.trim().replace(/\s/g, "");
         unsubs.push(realtimeHub.subscribe(`user:phone:${cleanPhone}`, sendEvent));
