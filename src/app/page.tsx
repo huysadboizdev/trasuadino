@@ -22,7 +22,7 @@ import { ProductCard } from "@/components/customer/ProductCard";
 import { MissingProfileModal } from "@/components/customer/MissingProfileModal";
 import { SepayQrPaymentModal } from "@/components/payment/SepayQrPaymentModal";
 import { Footer } from "@/components/ui/Footer";
-import { MapPin, Truck, Phone } from "lucide-react";
+import { MapPin, Truck, Phone, Copy, Check, ExternalLink } from "lucide-react";
 
 interface CartItem {
   id: string;
@@ -851,6 +851,19 @@ export default function StorefrontHomePage() {
     }
   };
 
+  const handleCopyOrderLink = (code: string) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/don-hang?code=${encodeURIComponent(code)}`;
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        showToast(`Đã sao chép link theo dõi đơn #${code}!`, "success");
+      })
+      .catch(() => {
+        showToast("Không thể sao chép liên kết", "warning");
+      });
+  };
+
   const isUserAdminOrStaff = user?.role === "ADMIN" || user?.role === "STAFF";
 
   return (
@@ -980,16 +993,29 @@ export default function StorefrontHomePage() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => {
-                  setAuthDefaultTab("LOGIN");
-                  setIsAuthOpen(true);
-                }}
-                className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-brand-900 to-brand-950 hover:from-brand-950 hover:to-black text-white font-black uppercase text-xs tracking-wider transition-all shadow-sm hover:shadow active:scale-95 flex items-center gap-1.5 min-h-[38px] sm:min-h-[40px] whitespace-nowrap border border-brand-800/30"
-              >
-                <span>👤</span>
-                <span>Đăng nhập</span>
-              </button>
+              <>
+                {/* Nút Tra Cứu Đơn cho khách chưa đăng nhập */}
+                <button
+                  onClick={() => setIsUserOrdersOpen(true)}
+                  className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] sm:text-xs font-bold transition-all min-h-[38px] flex items-center gap-1.5 border border-neutral-200/80 shadow-2xs active:scale-95 whitespace-nowrap"
+                  title="Tra cứu tiến độ đơn hàng không cần đăng nhập"
+                >
+                  <span>🧾</span>
+                  <span className="hidden xs:inline">Tra cứu đơn</span>
+                </button>
+
+                {/* Nút Đăng nhập */}
+                <button
+                  onClick={() => {
+                    setAuthDefaultTab("LOGIN");
+                    setIsAuthOpen(true);
+                  }}
+                  className="px-3 py-2 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-brand-900 to-brand-950 hover:from-brand-950 hover:to-black text-white font-black uppercase text-[11px] sm:text-xs tracking-wider transition-all shadow-sm hover:shadow active:scale-95 flex items-center gap-1.5 min-h-[38px] whitespace-nowrap border border-brand-800/30"
+                >
+                  <span>👤</span>
+                  <span>Đăng nhập</span>
+                </button>
+              </>
             )}
           </div>
 
@@ -1898,18 +1924,38 @@ export default function StorefrontHomePage() {
           subtitle={`Mã đơn: #${orderSuccess.orderCode}`}
           maxWidth="md"
           footer={
-            <Button
-              variant="primary"
-              size="md"
-              fullWidth
-              onClick={() => {
-                setOrderSuccess(null);
-                setIsUserOrdersOpen(true);
-              }}
-              className="text-xs sm:text-sm font-black uppercase tracking-wider bg-brand-900 hover:bg-brand-950 text-white py-3.5 rounded-2xl shadow-md"
-            >
-              Đóng & Xem đơn hàng →
-            </Button>
+            <div className="space-y-2 w-full">
+              <Button
+                variant="primary"
+                size="md"
+                fullWidth
+                onClick={() => {
+                  setOrderSuccess(null);
+                  setIsUserOrdersOpen(true);
+                }}
+                className="text-xs sm:text-sm font-black uppercase tracking-wider bg-brand-900 hover:bg-brand-950 text-white py-3.5 rounded-2xl shadow-md"
+              >
+                Xem tiến độ đơn hàng ngay →
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyOrderLink(orderSuccess.orderCode)}
+                  className="w-full py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-amber-300 shadow-2xs active:scale-95"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Sao chép link</span>
+                </button>
+                <Link
+                  href={`/don-hang?code=${encodeURIComponent(orderSuccess.orderCode)}`}
+                  onClick={() => setOrderSuccess(null)}
+                  className="w-full py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-neutral-300 shadow-2xs active:scale-95 text-center"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Mở trang riêng</span>
+                </Link>
+              </div>
+            </div>
           }
         >
           <div className="text-center space-y-4 py-2">
@@ -1925,7 +1971,7 @@ export default function StorefrontHomePage() {
               </p>
             </div>
 
-            {/* GIAO DIỆN COD: TUYỆT ĐỐI KHÔNG CÓ MÃ QR */}
+            {/* GIAO DIỆN COD */}
             <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200/80 text-left space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black uppercase text-amber-900 tracking-wider">
@@ -1956,7 +2002,7 @@ export default function StorefrontHomePage() {
               </div>
 
               <p className="text-[11px] text-amber-800 font-medium bg-white/80 p-2.5 rounded-xl border border-amber-200/60 text-center mt-1">
-                💡 Bạn vui lòng chuẩn bị tiền mặt <b>{formatCurrency(orderSuccess.totalAmount)}</b> khi tài xế giao trà sữa tới nhé!
+                💡 Bạn có thể xem lại tiến độ đơn bất kỳ lúc nào tại mục <b>"Tra cứu đơn"</b> trên trang chủ hoặc mở link theo dõi mà <b>không cần đăng nhập tài khoản</b>.
               </p>
             </div>
           </div>

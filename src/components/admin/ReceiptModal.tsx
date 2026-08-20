@@ -92,7 +92,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             TRÀ SỮA DINO
           </h2>
           <p className="text-[11px] text-neutral-600 mt-0.5 font-medium">
-            Hotline: 0988 888 888 • Q.7 TP.HCM
+            Hotline: 0858.798.206
           </p>
           <p className="text-[10px] text-neutral-500 mt-1">
             {new Date(order.createdAt).toLocaleString("vi-VN", {

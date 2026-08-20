@@ -44,7 +44,7 @@ const STORE_FILE = path.join(DATA_DIR, "store_data.json");
 
 const defaultSettings: StoreSetting = {
   storeName: "TRÀ SỮA & ĂN VẶT NHUNG",
-  hotline: "0988.888.888",
+  hotline: "0858.798.206",
   address: "Cửa hàng Quán Nhung, TP. Hồ Chí Minh",
   isOpen: true,
   openTime: "08:00",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Order, OrderStatus } from "@/lib/types";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Badge, BadgeVariant } from "../ui/Badge";
@@ -10,6 +10,7 @@ import { SepayQrPaymentModal } from "../payment/SepayQrPaymentModal";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "../ui/Toast";
 import { useRealtime } from "@/hooks/useRealtime";
+import { Copy, ExternalLink, Phone, Search, RefreshCw, X, Check } from "lucide-react";
 
 interface UserOrdersModalProps {
   isOpen: boolean;
@@ -30,9 +31,29 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
   const [cancellingOrder, setCancellingOrder] = useState<{ id: string; code: string } | null>(null);
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [cancelOrderError, setCancelOrderError] = useState<string | null>(null);
-  const [lookupPhoneInput, setLookupPhoneInput] = useState<string>("");
+  
+  // Search query state (phone or order code)
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [savedGuestCodes, setSavedGuestCodes] = useState<string[]>([]);
 
-  const fetchUserOrders = async (manualPhone?: string) => {
+  // Tải danh sách đơn lưu trên máy (LocalStorage)
+  const loadSavedGuestCodes = useCallback(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem("dino_guest_orders");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setSavedGuestCodes(parsed);
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return [];
+  }, []);
+
+  const fetchOrders = useCallback(async (customQuery?: string) => {
     try {
       setIsLoading(true);
       let queryParam = "";
@@ -42,31 +63,26 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
       } else if (user?.phone) {
         queryParam = `phone=${encodeURIComponent(user.phone)}`;
       } else {
-        // Khách vãng lai chưa đăng nhập: lấy từ localStorage hoặc số điện thoại nhập tra cứu
-        const targetPhone =
-          manualPhone !== undefined
-            ? manualPhone
-            : lookupPhoneInput ||
-              (typeof window !== "undefined" ? localStorage.getItem("dino_guest_phone") || "" : "");
+        // Khách vãng lai
+        const targetQ = customQuery !== undefined ? customQuery.trim() : searchQuery.trim();
 
-        const rawCodes = typeof window !== "undefined" ? localStorage.getItem("dino_guest_orders") : null;
-        let guestCodes = "";
-        try {
-          if (rawCodes) {
-            const arr = JSON.parse(rawCodes);
-            if (Array.isArray(arr) && arr.length > 0) guestCodes = arr.join(",");
-          }
-        } catch (e) {}
-
-        if (targetPhone.trim()) {
-          queryParam = `phone=${encodeURIComponent(targetPhone.trim())}`;
-          if (!lookupPhoneInput) setLookupPhoneInput(targetPhone.trim());
-        } else if (guestCodes) {
-          queryParam = `codes=${encodeURIComponent(guestCodes)}`;
+        if (targetQ) {
+          queryParam = `query=${encodeURIComponent(targetQ)}`;
         } else {
-          setOrders([]);
-          setIsLoading(false);
-          return;
+          // Tự động gom mã đơn & SĐT từ LocalStorage
+          const localPhone = typeof window !== "undefined" ? localStorage.getItem("dino_guest_phone") || "" : "";
+          const localCodes = loadSavedGuestCodes();
+
+          if (localCodes.length > 0) {
+            queryParam = `codes=${encodeURIComponent(localCodes.join(","))}`;
+          } else if (localPhone.trim()) {
+            queryParam = `phone=${encodeURIComponent(localPhone.trim())}`;
+            if (!searchQuery) setSearchQuery(localPhone.trim());
+          } else {
+            setOrders([]);
+            setIsLoading(false);
+            return;
+          }
         }
       }
 
@@ -80,13 +96,13 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, searchQuery, loadSavedGuestCodes]);
 
-  // Realtime lắng nghe cập nhật trạng thái đơn hàng của User hoặc Khách vãng lai
+  // Realtime SSE cập nhật tức thì
   useRealtime({
     role: "customer",
     userId: user?.id,
-    phone: user?.phone || lookupPhoneInput || (typeof window !== "undefined" ? localStorage.getItem("dino_guest_phone") || undefined : undefined),
+    phone: user?.phone || (searchQuery.match(/^[0-9+]{8,12}$/) ? searchQuery : undefined) || (typeof window !== "undefined" ? localStorage.getItem("dino_guest_phone") || undefined : undefined),
     onOrderStatusUpdated: (updatedOrder) => {
       setOrders((prev) => {
         const exists = prev.some((o) => o.id === updatedOrder.id || o.orderCode === updatedOrder.orderCode);
@@ -99,15 +115,38 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
       });
     },
     onReconnect: () => {
-      fetchUserOrders();
+      fetchOrders();
     },
   });
 
   useEffect(() => {
     if (isOpen) {
-      fetchUserOrders();
+      loadSavedGuestCodes();
+      fetchOrders();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, loadSavedGuestCodes, fetchOrders]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchOrders(searchQuery);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    fetchOrders("");
+  };
+
+  const handleCopyTrackingLink = (orderCode: string) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/don-hang?code=${encodeURIComponent(orderCode)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedCode(orderCode);
+      showToast(`Đã sao chép link theo dõi đơn #${orderCode}!`, "success");
+      setTimeout(() => setCopiedCode(null), 2500);
+    }).catch(() => {
+      showToast("Không thể sao chép liên kết", "warning");
+    });
+  };
 
   const handleCancelOrderClick = (orderId: string, orderCode: string) => {
     setCancellingOrder({ id: orderId, code: orderCode });
@@ -129,7 +168,7 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
       if (res.ok) {
         showToast(`Đã hủy đơn hàng #${cancellingOrder.code}`, "success");
         setCancellingOrder(null);
-        fetchUserOrders();
+        fetchOrders();
       } else {
         const data = await res.json().catch(() => ({}));
         setCancelOrderError(data.message || "Không thể hủy đơn hàng. Vui lòng thử lại.");
@@ -156,8 +195,8 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
   > = {
     NEW: { label: "ĐÃ NHẬN ĐƠN", variant: "danger", step: 1, desc: "Quán đã nhận và đang chuẩn bị xếp hàng pha chế." },
     PREPARING: { label: "ĐANG PHA CHẾ", variant: "warning", step: 2, desc: "Nhân viên đang pha trà và nướng bánh tươi cho bạn." },
-    DELIVERING: { label: "ĐANG GIAO HÀNG", variant: "info", step: 3, desc: "Tài xế đang giao đơn hàng đến địa chỉ của bạn." },
-    COMPLETED: { label: "HOÀN TẤT", variant: "success", step: 4, desc: "🎉 Đơn hàng đã giao thành công! Chúc bạn ngon miệng và cảm ơn bạn đã mua hàng tại Trà Sữa Dino ❤️" },
+    DELIVERING: { label: "ĐANG GIAO HÀNG", variant: "info", step: 3, desc: "Tài xế đang giao đơn hàng đến địa chỉ của bạn (15-30p)." },
+    COMPLETED: { label: "HOÀN TẤT", variant: "success", step: 4, desc: "🎉 Đơn hàng đã giao thành công! Cảm ơn bạn đã ủng hộ Trà Sữa Dino ❤️" },
     CANCELLED: { label: "ĐÃ HỦY", variant: "neutral", step: 0, desc: "Đơn hàng này đã bị hủy." },
   };
 
@@ -165,8 +204,8 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="ĐƠN HÀNG CỦA TÔI"
-      subtitle={user ? `Tài khoản: ${user.name || user.email}` : "Theo dõi tiến độ đơn hàng"}
+      title="THEO DÕI ĐƠN HÀNG"
+      subtitle={user ? `Tài khoản: ${user.name || user.email}` : "Tra cứu không cần đăng nhập"}
       maxWidth="md"
       footer={
         <Button
@@ -174,47 +213,83 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
           size="md"
           fullWidth
           onClick={onClose}
-          className="text-xs font-black uppercase"
+          className="text-xs font-black uppercase rounded-xl"
         >
           ĐÓNG
         </Button>
       }
     >
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        {/* Header toolbar & tra cứu */}
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-black text-neutral-500 uppercase tracking-wider">
-            LỊCH SỬ ĐẶT HÀNG ({orders.length})
+            {user ? "ĐƠN HÀNG CỦA BẠN" : "LỊCH SỬ ĐẶT HÀNG"} ({orders.length})
           </span>
           <button
-            onClick={() => fetchUserOrders()}
-            className="text-xs font-black uppercase text-brand-900 underline"
+            onClick={() => fetchOrders()}
+            className="inline-flex items-center gap-1 text-xs font-bold text-brand-900 hover:text-brand-950 transition-colors"
+            title="Làm mới trạng thái đơn hàng"
           >
-            Làm Mới Trạng Thái
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Làm mới</span>
           </button>
         </div>
 
-        {/* Thanh tra cứu theo số điện thoại cho khách vãng lai */}
-        {!user && (
-          <div className="bg-neutral-50 p-2.5 rounded-2xl border border-neutral-200 flex gap-2">
-            <input
-              type="tel"
-              value={lookupPhoneInput}
-              onChange={(e) => setLookupPhoneInput(e.target.value)}
-              placeholder="Nhập SĐT để tra cứu đơn..."
-              className="flex-1 px-3 py-1.5 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
-            />
+        {/* Thanh tra cứu đa năng cho khách vãng lai & khách đã đăng nhập */}
+        <form onSubmit={handleSearchSubmit} className="space-y-2">
+          <div className="bg-neutral-50 p-2 rounded-2xl border border-neutral-200 flex items-center gap-2 shadow-2xs">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Nhập SĐT hoặc Mã đơn (VD: 098... hoặc DINO-123)"
+                className="w-full pl-9 pr-8 py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-0.5"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
             <Button
-              type="button"
+              type="submit"
               variant="primary"
               size="sm"
-              onClick={() => fetchUserOrders(lookupPhoneInput)}
-              className="text-xs font-black uppercase bg-brand-900 text-white rounded-xl px-3"
+              className="text-xs font-black uppercase bg-brand-900 text-white rounded-xl px-3.5 py-2 flex-shrink-0 shadow-2xs"
             >
               TRA CỨU
             </Button>
           </div>
-        )}
 
+          {/* Gợi ý mã đơn đã đặt gần đây trên thiết bị */}
+          {!user && savedGuestCodes.length > 0 && !searchQuery && (
+            <div className="flex items-center gap-1.5 flex-wrap px-1">
+              <span className="text-[10px] font-bold text-neutral-400">Đã đặt gần đây:</span>
+              {savedGuestCodes.slice(0, 4).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(code);
+                    fetchOrders(code);
+                  }}
+                  className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors"
+                >
+                  #{code}
+                </button>
+              ))}
+            </div>
+          )}
+        </form>
+
+        {/* Danh sách đơn hàng */}
         {isLoading ? (
           <div className="py-12 text-center">
             <div className="inline-block h-7 w-7 animate-spin rounded-full border-3 border-brand-600 border-t-transparent mb-2" />
@@ -223,16 +298,17 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
             </p>
           </div>
         ) : orders.length === 0 ? (
-          <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+          <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2.5 p-4">
+            <div className="text-3xl">🦕</div>
             <p className="text-sm font-black text-neutral-800 uppercase">
               CHƯA TÌM THẤY ĐƠN HÀNG NÀO
             </p>
-            <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-              Hãy chọn cho mình một ly trà sữa hoặc món bánh ngon lành ngoài trang chủ, hoặc nhập SĐT nhận hàng để tra cứu nhé!
+            <p className="text-xs text-neutral-500 max-w-xs mx-auto leading-relaxed">
+              Bạn có thể nhập <b>Số điện thoại đặt hàng</b> hoặc <b>Mã đơn (DINO-xxx)</b> vào ô tìm kiếm phía trên để tra cứu ngay nhé!
             </p>
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
             {orders.map((order) => {
               const statusCfg = statusBadgeConfig[order.orderStatus] || {
                 label: order.orderStatus,
@@ -244,36 +320,65 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
               return (
                 <div
                   key={order.id}
-                  className="bg-white rounded-2xl p-4 border border-neutral-200 shadow-sm space-y-3"
+                  className="bg-white rounded-2xl p-4 border border-neutral-200/90 shadow-2xs space-y-3 hover:border-brand-300 transition-all"
                 >
                   {/* Progress Bar 4 bước */}
                   {order.orderStatus !== "CANCELLED" && (
-                    <div className="grid grid-cols-4 gap-1">
-                      {[1, 2, 3, 4].map((s) => (
-                        <div
-                          key={s}
-                          className={`h-1.5 rounded-full transition-all ${
-                            s <= statusCfg.step
-                              ? order.orderStatus === "COMPLETED"
-                                ? "bg-emerald-600"
-                                : order.orderStatus === "DELIVERING"
-                                ? "bg-sky-600"
-                                : order.orderStatus === "PREPARING"
-                                ? "bg-amber-500"
-                                : "bg-rose-500"
-                              : "bg-neutral-200"
-                          }`}
-                        />
-                      ))}
+                    <div className="space-y-1">
+                      <div className="grid grid-cols-4 gap-1">
+                        {[1, 2, 3, 4].map((s) => (
+                          <div
+                            key={s}
+                            className={`h-1.5 rounded-full transition-all ${
+                              s <= statusCfg.step
+                                ? order.orderStatus === "COMPLETED"
+                                  ? "bg-emerald-600"
+                                  : order.orderStatus === "DELIVERING"
+                                  ? "bg-sky-600"
+                                  : order.orderStatus === "PREPARING"
+                                  ? "bg-amber-500"
+                                  : "bg-rose-500"
+                                : "bg-neutral-200"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-[9px] font-bold text-neutral-400 px-0.5">
+                        <span className={statusCfg.step >= 1 ? "text-rose-600 font-black" : ""}>Nhận đơn</span>
+                        <span className={statusCfg.step >= 2 ? "text-amber-600 font-black" : ""}>Pha chế</span>
+                        <span className={statusCfg.step >= 3 ? "text-sky-600 font-black" : ""}>Đang giao</span>
+                        <span className={statusCfg.step >= 4 ? "text-emerald-600 font-black" : ""}>Hoàn tất</span>
+                      </div>
                     </div>
                   )}
 
                   {/* Header Đơn */}
                   <div className="flex items-center justify-between border-b border-neutral-100 pb-2.5">
                     <div>
-                      <span className="font-black text-brand-950 text-sm">
-                        #{order.orderCode}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-brand-950 text-sm sm:text-base">
+                          #{order.orderCode}
+                        </span>
+                        {/* Nút Copy link */}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyTrackingLink(order.orderCode)}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 transition-colors"
+                          title="Sao chép link theo dõi đơn hàng"
+                        >
+                          {copiedCode === order.orderCode ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span className="text-emerald-700">Đã chép</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3 text-neutral-500" />
+                              <span>Copy link</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                       <p className="text-[10px] text-neutral-400 font-bold mt-0.5">
                         {new Date(order.createdAt).toLocaleString("vi-VN")}
                       </p>
@@ -288,16 +393,27 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
                     ℹ️ {statusCfg.desc}
                   </div>
 
-                  {/* Địa chỉ giao hàng cụ thể */}
-                  <div className="text-xs text-neutral-600 font-medium">
-                    <span className="font-bold text-neutral-900">📍 Địa chỉ giao:</span>{" "}
-                    {order.deliveryAddress}
+                  {/* Địa chỉ giao hàng cụ thể & SĐT */}
+                  <div className="text-xs text-neutral-600 space-y-1">
+                    <div>
+                      <span className="font-bold text-neutral-900">👤 Người nhận:</span>{" "}
+                      {order.customerName} ({order.customerPhone})
+                    </div>
+                    <div>
+                      <span className="font-bold text-neutral-900">📍 Địa chỉ giao:</span>{" "}
+                      {order.deliveryAddress}
+                    </div>
+                    {order.note && (
+                      <div className="text-neutral-500 italic">
+                        <span className="font-bold text-neutral-700">📝 Ghi chú:</span> {order.note}
+                      </div>
+                    )}
                   </div>
 
                   {/* Danh sách món */}
-                  <div className="space-y-1.5 text-xs pt-1 border-t border-neutral-100">
+                  <div className="space-y-1.5 text-xs pt-2 border-t border-neutral-100">
                     {order.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between">
+                      <div key={idx} className="flex justify-between items-start gap-2">
                         <div>
                           <span className="font-bold text-neutral-900">
                             {item.quantity}x {item.productName}
@@ -308,15 +424,15 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
                             </p>
                           )}
                         </div>
-                        <span className="font-black text-neutral-800">
+                        <span className="font-black text-neutral-800 whitespace-nowrap">
                           {formatCurrency(item.totalPrice)}
                         </span>
                       </div>
                     ))}
                   </div>
 
-                  {/* Footer Tổng tiền, Hủy đơn & Trạng thái thanh toán */}
-                  <div className="pt-2.5 border-t border-neutral-100 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+                  {/* Footer Tổng tiền, Hủy đơn, Chi tiết & QR SePay */}
+                  <div className="pt-2.5 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <span className="text-[11px] font-bold text-neutral-500 block">
                         Tổng thanh toán:
@@ -334,6 +450,19 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5">
+                      {/* Xem trang riêng */}
+                      <a
+                        href={`/don-hang?code=${encodeURIComponent(order.orderCode)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 transition-colors"
+                        title="Mở toàn màn hình theo dõi đơn"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Trang riêng</span>
+                      </a>
+
+                      {/* Hủy đơn nếu còn mới */}
                       {order.orderStatus === "NEW" && (
                         <Button
                           variant="danger"
@@ -345,6 +474,7 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
                         </Button>
                       )}
 
+                      {/* Trạng thái thanh toán */}
                       {order.paymentMethod === "SEPAY_QR" ? (
                         order.paymentStatus === "PAID" ? (
                           <Badge variant="success" size="sm">
@@ -362,7 +492,7 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
                         )
                       ) : (
                         <Badge variant="neutral" size="sm">
-                          COD
+                          💵 TIỀN MẶT (COD)
                         </Badge>
                       )}
                     </div>
@@ -372,6 +502,20 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
             })}
           </div>
         )}
+
+        {/* Hotline hỗ trợ nhanh */}
+        <div className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80 flex items-center justify-between text-xs text-amber-900">
+          <div className="flex items-center gap-1.5">
+            <Phone className="w-3.5 h-3.5 text-amber-700" />
+            <span className="font-bold">Cần hỗ trợ đơn hàng khẩn cấp?</span>
+          </div>
+          <a
+            href="tel:0858798206"
+            className="font-black text-brand-950 underline hover:text-brand-800"
+          >
+            Hotline: 0858.798.206
+          </a>
+        </div>
       </div>
 
       {/* Modal Hiện QR SePay lại nếu đơn chưa thanh toán */}
@@ -382,7 +526,7 @@ export const UserOrdersModal: React.FC<UserOrdersModalProps> = ({
           orderCode={selectedQrOrder.orderCode}
           totalAmount={selectedQrOrder.totalAmount}
           onPaymentSuccess={() => {
-            fetchUserOrders();
+            fetchOrders();
             showToast(`🎉 Đơn hàng #${selectedQrOrder.orderCode} đã được thanh toán thành công!`, "success");
           }}
         />
