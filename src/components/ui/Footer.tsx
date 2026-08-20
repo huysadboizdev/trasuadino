@@ -1,6 +1,8 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
-import { Phone, MapPin, ShieldCheck, FileText, Clock, ExternalLink, Truck } from "lucide-react";
+import { Phone, MapPin, ShieldCheck, FileText, Clock, ExternalLink, Truck, HelpCircle } from "lucide-react";
 
 export function Footer() {
   return (
@@ -46,6 +48,20 @@ export function Footer() {
             </h3>
             <nav aria-label="Footer Policy Links">
               <ul className="space-y-2.5 text-xs sm:text-sm">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("open-onboarding-guide"));
+                      }
+                    }}
+                    className="group inline-flex items-center gap-2 text-neutral-600 hover:text-brand-900 font-semibold transition-colors focus:outline-none focus-visible:underline text-left cursor-pointer"
+                  >
+                    <HelpCircle className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform flex-shrink-0" />
+                    <span>Hướng dẫn sử dụng web</span>
+                  </button>
+                </li>
                 <li>
                   <Link
                     href="/privacy"

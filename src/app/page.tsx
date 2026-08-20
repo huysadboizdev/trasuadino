@@ -20,6 +20,7 @@ import {
 } from "@/components/customer/ProductCustomizationModal";
 import { ProductCard } from "@/components/customer/ProductCard";
 import { MissingProfileModal } from "@/components/customer/MissingProfileModal";
+import { OnboardingGuideModal } from "@/components/customer/OnboardingGuideModal";
 import { SepayQrPaymentModal } from "@/components/payment/SepayQrPaymentModal";
 import { Footer } from "@/components/ui/Footer";
 import { MapPin, Truck, Phone, Copy, Check, ExternalLink } from "lucide-react";
@@ -2024,6 +2025,7 @@ export default function StorefrontHomePage() {
         missingFields={missingFieldsState}
         onGoToProfile={handleGoToProfileToFillInfo}
       />
+      <OnboardingGuideModal />
     </div>
   );
 }
